@@ -131,8 +131,10 @@ class _CreateSheetState extends State<CreateSheet> {
               ),
             ),
             const SizedBox(height: 12),
-            // Visibility + submit
-            Row(
+            // Visibility chips
+            Wrap(
+              spacing: 8,
+              runSpacing: 8,
               children: [
                 _VisibilityChip(
                   label: 'Public',
@@ -140,36 +142,37 @@ class _CreateSheetState extends State<CreateSheet> {
                   selected: _visibility == 'public',
                   onTap: () => setState(() => _visibility = 'public'),
                 ),
-                const SizedBox(width: 8),
                 _VisibilityChip(
                   label: 'Amis',
                   icon: Icons.group,
                   selected: _visibility == 'friends',
                   onTap: () => setState(() => _visibility = 'friends'),
                 ),
-                const SizedBox(width: 8),
                 _VisibilityChip(
                   label: 'Prive',
                   icon: Icons.lock,
                   selected: _visibility == 'private',
                   onTap: () => setState(() => _visibility = 'private'),
                 ),
-                const Spacer(),
-                // Submit
-                FilledButton.icon(
-                  onPressed: _submitting || !_hasText ? null : _submit,
-                  icon: _submitting
-                      ? const SizedBox(
-                          width: 16, height: 16,
-                          child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white),
-                        )
-                      : const Icon(Icons.send, size: 18),
-                  label: const Text('Publier'),
-                  style: FilledButton.styleFrom(
-                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-                  ),
-                ),
               ],
+            ),
+            const SizedBox(height: 12),
+            // Submit
+            SizedBox(
+              width: double.infinity,
+              child: FilledButton.icon(
+                onPressed: _submitting || !_hasText ? null : _submit,
+                icon: _submitting
+                    ? const SizedBox(
+                        width: 16, height: 16,
+                        child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white),
+                      )
+                    : const Icon(Icons.send, size: 18),
+                label: const Text('Publier'),
+                style: FilledButton.styleFrom(
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+                ),
+              ),
             ),
           ],
         ),

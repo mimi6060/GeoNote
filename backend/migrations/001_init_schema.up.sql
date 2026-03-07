@@ -18,9 +18,7 @@ CREATE TABLE messages (
     id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
     user_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
     content TEXT NOT NULL,
-    latitude DOUBLE PRECISION NOT NULL,
-    longitude DOUBLE PRECISION NOT NULL,
-    geom GEOMETRY(Point, 4326),
+    location GEOMETRY(Point, 4326) NOT NULL,
     visibility VARCHAR(10) NOT NULL DEFAULT 'public',
     hashtags TEXT[] DEFAULT '{}',
     likes_count INTEGER DEFAULT 0,
@@ -28,29 +26,14 @@ CREATE TABLE messages (
     created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
     CONSTRAINT content_not_empty CHECK (char_length(content) > 0),
     CONSTRAINT content_max_length CHECK (char_length(content) <= 500),
-    CONSTRAINT valid_latitude CHECK (latitude >= -90 AND latitude <= 90),
-    CONSTRAINT valid_longitude CHECK (longitude >= -180 AND longitude <= 180),
     CONSTRAINT valid_visibility CHECK (visibility IN ('public', 'friends', 'private'))
 );
 
 CREATE INDEX idx_messages_user_id ON messages(user_id);
-CREATE INDEX idx_messages_geom ON messages USING GIST(geom);
+CREATE INDEX idx_messages_location ON messages USING GIST(location);
 CREATE INDEX idx_messages_visibility ON messages(visibility);
 CREATE INDEX idx_messages_created_at ON messages(created_at DESC);
 CREATE INDEX idx_messages_hashtags ON messages USING GIN(hashtags);
-
--- Trigger: auto-populate geom a partir de lat/lng
-CREATE OR REPLACE FUNCTION messages_set_geom()
-RETURNS TRIGGER AS $$
-BEGIN
-    NEW.geom := ST_SetSRID(ST_MakePoint(NEW.longitude, NEW.latitude), 4326);
-    RETURN NEW;
-END;
-$$ LANGUAGE plpgsql;
-
-CREATE TRIGGER trg_messages_geom
-BEFORE INSERT OR UPDATE OF latitude, longitude ON messages
-FOR EACH ROW EXECUTE FUNCTION messages_set_geom();
 
 -- Interactions (likes + commentaires)
 CREATE TABLE interactions (
@@ -69,7 +52,6 @@ CREATE TABLE interactions (
 
 CREATE INDEX idx_interactions_message_id ON interactions(message_id);
 CREATE INDEX idx_interactions_user_id ON interactions(user_id);
--- Only one like per user per message (comments are unlimited)
 CREATE UNIQUE INDEX one_like_per_user_per_message ON interactions(message_id, user_id) WHERE type = 'like';
 
 -- Inscriptions beta
@@ -79,13 +61,14 @@ CREATE TABLE beta_signups (
     created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
 );
 
--- Recherche par proximite avec PostGIS (ST_DWithin)
--- 100x plus rapide que Haversine pur grace a l'index GIST
+-- Recherche par proximite avec PostGIS
+-- Bounding box pre-filter + ST_DWithin pour performance optimale
 CREATE OR REPLACE FUNCTION get_nearby_messages(
     user_lat DOUBLE PRECISION,
     user_lng DOUBLE PRECISION,
     radius_meters INTEGER DEFAULT 500,
-    msg_limit INTEGER DEFAULT 50
+    msg_limit INTEGER DEFAULT 50,
+    current_user_id UUID DEFAULT NULL
 )
 RETURNS TABLE (
     id UUID,
@@ -101,24 +84,32 @@ RETURNS TABLE (
     created_at TIMESTAMP WITH TIME ZONE,
     distance_meters DOUBLE PRECISION
 ) AS $$
+DECLARE
+    delta_lat DOUBLE PRECISION := (radius_meters::DOUBLE PRECISION / 111000.0) * 1.2;
+    delta_lng DOUBLE PRECISION := (radius_meters::DOUBLE PRECISION / (111000.0 * COS(RADIANS(user_lat)))) * 1.2;
+    user_point GEOMETRY := ST_SetSRID(ST_MakePoint(user_lng, user_lat), 4326);
 BEGIN
     RETURN QUERY
     SELECT
         m.id, m.user_id, u.username, m.content,
-        m.latitude, m.longitude, m.visibility, m.hashtags,
+        ST_Y(m.location) AS latitude,
+        ST_X(m.location) AS longitude,
+        m.visibility, m.hashtags,
         m.likes_count, m.comments_count, m.created_at,
-        ST_Distance(
-            m.geom::geography,
-            ST_SetSRID(ST_MakePoint(user_lng, user_lat), 4326)::geography
-        ) AS distance_meters
+        ST_Distance(m.location::geography, user_point::geography) AS distance_meters
     FROM messages m
     JOIN users u ON m.user_id = u.id
-    WHERE m.visibility = 'public'
-    AND ST_DWithin(
-        m.geom::geography,
-        ST_SetSRID(ST_MakePoint(user_lng, user_lat), 4326)::geography,
-        radius_meters
-    )
+    WHERE
+        m.location && ST_MakeEnvelope(
+            user_lng - delta_lng, user_lat - delta_lat,
+            user_lng + delta_lng, user_lat + delta_lat,
+            4326
+        )
+        AND ST_DWithin(m.location::geography, user_point::geography, radius_meters)
+        AND (
+            m.visibility = 'public'
+            OR (current_user_id IS NOT NULL AND m.user_id = current_user_id)
+        )
     ORDER BY distance_meters ASC
     LIMIT msg_limit;
 END;

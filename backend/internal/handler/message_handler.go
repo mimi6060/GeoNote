@@ -21,13 +21,23 @@ func NewMessageHandler(svc *service.MessageService) *MessageHandler {
 }
 
 func (h *MessageHandler) GetNearby(w http.ResponseWriter, r *http.Request) {
+	radius := parseInt(r, "radius", 1000)
+	if radius > 1000 {
+		radius = 1000
+	}
+	limit := parseInt(r, "limit", 50)
+	if limit > 50 {
+		limit = 50
+	}
+
 	q := model.NearbyQuery{
 		Latitude:  parseFloat(r, "lat", 48.8566),
 		Longitude: parseFloat(r, "lng", 2.3522),
-		Radius:    parseInt(r, "radius", 10000),
-		Limit:     parseInt(r, "limit", 50),
+		Radius:    radius,
+		Limit:     limit,
 		Sort:      r.URL.Query().Get("sort"),
 		Hashtag:   r.URL.Query().Get("hashtag"),
+		UserID:    middleware.GetUserID(r.Context()),
 	}
 
 	messages, err := h.svc.GetNearby(r.Context(), q)

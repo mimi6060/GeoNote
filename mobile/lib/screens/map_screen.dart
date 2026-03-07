@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:math' as math;
 
 import 'package:flutter/material.dart';
 import 'package:flutter_map/flutter_map.dart';
@@ -26,8 +27,13 @@ class _MapScreenState extends State<MapScreen> {
   final MapController _mapController = MapController();
   final WsService _ws = WsService();
   LatLng _center = LocationService.defaultLocation;
+  LatLng _lastLoadCenter = LocationService.defaultLocation;
   StreamSubscription? _wsSub;
   Timer? _debounce;
+  DateTime _lastLoad = DateTime.fromMillisecondsSinceEpoch(0);
+
+  static const double _minReloadDistanceMeters = 100;
+  static const Duration _minReloadInterval = Duration(seconds: 5);
 
   @override
   void initState() {
@@ -49,7 +55,7 @@ class _MapScreenState extends State<MapScreen> {
       if (event.type == 'new_message' ||
           event.type == 'new_like' ||
           event.type == 'new_comment') {
-        _loadMessages();
+        _forceLoadMessages();
       }
     });
   }
@@ -60,24 +66,49 @@ class _MapScreenState extends State<MapScreen> {
       setState(() => _center = location);
       _mapController.move(_center, 15);
     }
-    _loadMessages();
+    _forceLoadMessages();
   }
 
-  void _loadMessages() {
-    context.read<MessagesProvider>().loadNearby(_center);
+  /// Always load, ignoring debounce/distance checks.
+  void _forceLoadMessages() {
+    _lastLoadCenter = _center;
+    _lastLoad = DateTime.now();
+    context.read<MessagesProvider>().loadNearby(_center, radius: 1000);
   }
 
+  /// Smart reload: only if moved > 100m AND at least 5s since last load.
   void _onMapMoved() {
     _debounce?.cancel();
-    _debounce = Timer(const Duration(milliseconds: 500), _loadMessages);
+    _debounce = Timer(const Duration(milliseconds: 500), () {
+      final dist = _distanceMeters(_center, _lastLoadCenter);
+      final elapsed = DateTime.now().difference(_lastLoad);
+
+      if (dist >= _minReloadDistanceMeters && elapsed >= _minReloadInterval) {
+        _forceLoadMessages();
+      }
+    });
   }
+
+  double _distanceMeters(LatLng a, LatLng b) {
+    const R = 6371000.0;
+    final dLat = _rad(b.latitude - a.latitude);
+    final dLng = _rad(b.longitude - a.longitude);
+    final x = math.sin(dLat / 2) * math.sin(dLat / 2) +
+        math.cos(_rad(a.latitude)) *
+            math.cos(_rad(b.latitude)) *
+            math.sin(dLng / 2) *
+            math.sin(dLng / 2);
+    return R * 2 * math.atan2(math.sqrt(x), math.sqrt(1 - x));
+  }
+
+  double _rad(double deg) => deg * math.pi / 180;
 
   void _showMessageSheet(Message message) {
     showModalBottomSheet(
       context: context,
       isScrollControlled: true,
       backgroundColor: Colors.transparent,
-      builder: (_) => MessagePopup(message: message, onRefresh: _loadMessages),
+      builder: (_) => MessagePopup(message: message, onRefresh: _forceLoadMessages),
     );
   }
 
@@ -91,7 +122,7 @@ class _MapScreenState extends State<MapScreen> {
       backgroundColor: Colors.transparent,
       builder: (_) => CreateSheet(
         position: position ?? _center,
-        onCreated: _loadMessages,
+        onCreated: _forceLoadMessages,
       ),
     );
   }
@@ -134,7 +165,7 @@ class _MapScreenState extends State<MapScreen> {
               initialCenter: _center,
               initialZoom: 13,
               minZoom: 3,
-              maxZoom: 18,
+              maxZoom: 19,
               interactionOptions: const InteractionOptions(
                 flags: InteractiveFlag.all,
               ),
@@ -152,6 +183,7 @@ class _MapScreenState extends State<MapScreen> {
               TileLayer(
                 urlTemplate: 'https://tile.openstreetmap.org/{z}/{x}/{y}.png',
                 userAgentPackageName: 'com.geonote.app',
+                maxZoom: 19,
               ),
               MarkerClusterLayerWidget(
                 options: MarkerClusterLayerOptions(

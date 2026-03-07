@@ -34,10 +34,15 @@ func NewRedisCache(addr, password string, db int, ttl time.Duration) *RedisCache
 	return &RedisCache{client: client, ttl: ttl}
 }
 
-// NearbyKey genere une cle de cache pour une zone geographique.
-// On arrondit lat/lng a 3 decimales (~111m de precision) pour regrouper les requetes proches.
-func NearbyKey(lat, lng float64, radius int) string {
-	return fmt.Sprintf("nearby:%.3f:%.3f:%d", lat, lng, radius)
+// GridKey genere une cle de cache basee sur une grille.
+// Arrondit lat/lng a 3 decimales (~111m) pour partager le cache entre requetes proches.
+// Inclut le userID pour separer les resultats public vs authentifie.
+func GridKey(lat, lng float64, radius int, userID string) string {
+	uid := "anon"
+	if userID != "" {
+		uid = userID[:8] // prefixe suffisant pour eviter les collisions
+	}
+	return fmt.Sprintf("grid:%.3f:%.3f:%d:%s", lat, lng, radius, uid)
 }
 
 // Get recupere une valeur du cache et la deserialise.
@@ -75,7 +80,7 @@ func (c *RedisCache) InvalidateZone(ctx context.Context) {
 		return
 	}
 
-	iter := c.client.Scan(ctx, 0, "nearby:*", 100).Iterator()
+	iter := c.client.Scan(ctx, 0, "grid:*", 100).Iterator()
 	var keys []string
 	for iter.Next(ctx) {
 		keys = append(keys, iter.Val())

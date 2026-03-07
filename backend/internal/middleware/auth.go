@@ -53,6 +53,24 @@ func Auth(authSvc *service.AuthService) func(http.Handler) http.Handler {
 	}
 }
 
+// OptionalAuth extrait le user_id si un token est present, sans bloquer sinon.
+func OptionalAuth(authSvc *service.AuthService) func(http.Handler) http.Handler {
+	return func(next http.Handler) http.Handler {
+		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			header := r.Header.Get("Authorization")
+			token := strings.TrimPrefix(header, "Bearer ")
+			if header != "" && token != header {
+				if userID, err := authSvc.ValidateToken(token); err == nil {
+					ctx := context.WithValue(r.Context(), UserIDKey, userID)
+					next.ServeHTTP(w, r.WithContext(ctx))
+					return
+				}
+			}
+			next.ServeHTTP(w, r)
+		})
+	}
+}
+
 // GetUserID extrait le user_id du contexte.
 func GetUserID(ctx context.Context) string {
 	if v, ok := ctx.Value(UserIDKey).(string); ok {

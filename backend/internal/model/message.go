@@ -50,4 +50,5 @@ type NearbyQuery struct {
 	Limit     int
 	Sort      string
 	Hashtag   string
+	UserID    string
 }

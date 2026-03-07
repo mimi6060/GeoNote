@@ -29,11 +29,12 @@ func (r *MessageRepo) Create(ctx context.Context, userID string, req model.Creat
 	msg := &model.Message{}
 	err := r.pool.QueryRow(ctx,
 		`WITH ins AS (
-		   INSERT INTO messages (user_id, content, latitude, longitude, visibility, hashtags)
-		   VALUES ($1, $2, $3, $4, $5, $6)
+		   INSERT INTO messages (user_id, content, location, visibility, hashtags)
+		   VALUES ($1, $2, ST_SetSRID(ST_MakePoint($4, $3), 4326), $5, $6)
 		   RETURNING *
 		 )
-		 SELECT ins.id, ins.user_id, u.username, ins.content, ins.latitude, ins.longitude,
+		 SELECT ins.id, ins.user_id, u.username, ins.content,
+		        ST_Y(ins.location) AS latitude, ST_X(ins.location) AS longitude,
 		        ins.visibility, ins.hashtags, ins.likes_count, ins.comments_count, ins.created_at
 		 FROM ins JOIN users u ON ins.user_id = u.id`,
 		userID, strings.TrimSpace(req.Content), req.Latitude, req.Longitude, vis, hashtags,
@@ -48,11 +49,16 @@ func (r *MessageRepo) Create(ctx context.Context, userID string, req model.Creat
 }
 
 func (r *MessageRepo) GetNearby(ctx context.Context, q model.NearbyQuery) ([]model.Message, error) {
+	var userIDParam interface{}
+	if q.UserID != "" {
+		userIDParam = q.UserID
+	}
+
 	rows, err := r.pool.Query(ctx,
 		`SELECT id, user_id, username, content, latitude, longitude,
 		        visibility, hashtags, likes_count, comments_count, created_at, distance_meters
-		 FROM get_nearby_messages($1, $2, $3, $4)`,
-		q.Latitude, q.Longitude, q.Radius, q.Limit,
+		 FROM get_nearby_messages($1, $2, $3, $4, $5)`,
+		q.Latitude, q.Longitude, q.Radius, q.Limit, userIDParam,
 	)
 	if err != nil {
 		return nil, err
@@ -107,7 +113,8 @@ func (r *MessageRepo) Delete(ctx context.Context, id, userID string) error {
 
 func (r *MessageRepo) GetByUser(ctx context.Context, userID string) ([]model.Message, error) {
 	rows, err := r.pool.Query(ctx,
-		`SELECT m.id, m.user_id, u.username, m.content, m.latitude, m.longitude,
+		`SELECT m.id, m.user_id, u.username, m.content,
+		        ST_Y(m.location) AS latitude, ST_X(m.location) AS longitude,
 		        m.visibility, m.hashtags, m.likes_count, m.comments_count, m.created_at
 		 FROM messages m
 		 JOIN users u ON m.user_id = u.id

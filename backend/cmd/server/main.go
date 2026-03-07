@@ -76,7 +76,7 @@ func main() {
 		AllowCredentials: false,
 		MaxAge:           300,
 	}))
-	r.Use(middleware.RateLimit(100, time.Minute))
+	r.Use(middleware.RateLimit(10, 20)) // 10 req/s, burst 20
 
 	// ---- Routes ----
 	r.Route("/api/v1", func(r chi.Router) {
@@ -87,8 +87,8 @@ func main() {
 		r.Post("/auth/register", authH.Register)
 		r.Post("/auth/login", authH.Login)
 
-		// Messages (lecture publique)
-		r.Get("/messages/nearby", messageH.GetNearby)
+		// Messages (lecture publique, auth optionnelle pour voir ses propres messages prives)
+		r.With(middleware.OptionalAuth(authSvc)).Get("/messages/nearby", messageH.GetNearby)
 		r.Get("/users/{id}/messages", messageH.GetByUser)
 
 		// Messages (ecriture authentifiee)
@@ -96,7 +96,7 @@ func main() {
 			r.Use(middleware.Auth(authSvc))
 
 			r.Get("/auth/me", authH.Me)
-			r.Post("/messages", messageH.Create)
+			r.With(middleware.AntiSpam(30 * time.Second)).Post("/messages", messageH.Create)
 			r.Delete("/messages/{id}", messageH.Delete)
 
 			r.Post("/messages/{id}/like", interactionH.ToggleLike)

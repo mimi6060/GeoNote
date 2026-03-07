@@ -14,7 +14,7 @@ class MessagesProvider extends ChangeNotifier {
   bool get loading => _loading;
   String? get error => _error;
 
-  Future<void> loadNearby(LatLng center, {int radius = 10000}) async {
+  Future<void> loadNearby(LatLng center, {int radius = 1000}) async {
     _loading = true;
     _error = null;
     notifyListeners();
