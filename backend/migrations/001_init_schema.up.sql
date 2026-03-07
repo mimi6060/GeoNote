@@ -64,12 +64,13 @@ CREATE TABLE interactions (
     CONSTRAINT comment_has_content CHECK (
         (type = 'comment' AND content IS NOT NULL AND char_length(content) > 0)
         OR type = 'like'
-    ),
-    CONSTRAINT one_like_per_user_per_message UNIQUE (message_id, user_id, type)
+    )
 );
 
 CREATE INDEX idx_interactions_message_id ON interactions(message_id);
 CREATE INDEX idx_interactions_user_id ON interactions(user_id);
+-- Only one like per user per message (comments are unlimited)
+CREATE UNIQUE INDEX one_like_per_user_per_message ON interactions(message_id, user_id) WHERE type = 'like';
 
 -- Inscriptions beta
 CREATE TABLE beta_signups (
