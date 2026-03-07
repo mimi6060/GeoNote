@@ -3,15 +3,15 @@
 
 INSERT INTO users (id, username, email, password_hash, is_anonymous, created_at) VALUES
   ('a1111111-1111-1111-1111-111111111111', 'alice_explore', 'alice@test.com',
-   '$2a$10$rQZ8K6YxGp5LQhGKHsx0aOhB4kwuFeEYC5O4cPXYmxGsRZxPjKWXC', false, '2026-03-01 10:00:00+00'),
+   '$2a$10$Yu6IB6EWncoERbvtL3z51eenK6Fq06zWFBO6r8Yb9NzIRweMRZKXu', false, '2026-03-01 10:00:00+00'),
   ('b2222222-2222-2222-2222-222222222222', 'bob_runner', 'bob@test.com',
-   '$2a$10$rQZ8K6YxGp5LQhGKHsx0aOhB4kwuFeEYC5O4cPXYmxGsRZxPjKWXC', false, '2026-03-01 11:00:00+00'),
+   '$2a$10$Yu6IB6EWncoERbvtL3z51eenK6Fq06zWFBO6r8Yb9NzIRweMRZKXu', false, '2026-03-01 11:00:00+00'),
   ('c3333333-3333-3333-3333-333333333333', 'charlie_photo', 'charlie@test.com',
-   '$2a$10$rQZ8K6YxGp5LQhGKHsx0aOhB4kwuFeEYC5O4cPXYmxGsRZxPjKWXC', false, '2026-03-02 09:00:00+00'),
+   '$2a$10$Yu6IB6EWncoERbvtL3z51eenK6Fq06zWFBO6r8Yb9NzIRweMRZKXu', false, '2026-03-02 09:00:00+00'),
   ('d4444444-4444-4444-4444-444444444444', 'diana_local', 'diana@test.com',
-   '$2a$10$rQZ8K6YxGp5LQhGKHsx0aOhB4kwuFeEYC5O4cPXYmxGsRZxPjKWXC', false, '2026-03-02 14:00:00+00'),
+   '$2a$10$Yu6IB6EWncoERbvtL3z51eenK6Fq06zWFBO6r8Yb9NzIRweMRZKXu', false, '2026-03-02 14:00:00+00'),
   ('e5555555-5555-5555-5555-555555555555', 'anon_user', 'anon@test.com',
-   '$2a$10$rQZ8K6YxGp5LQhGKHsx0aOhB4kwuFeEYC5O4cPXYmxGsRZxPjKWXC', true, '2026-03-03 08:00:00+00');
+   '$2a$10$Yu6IB6EWncoERbvtL3z51eenK6Fq06zWFBO6r8Yb9NzIRweMRZKXu', true, '2026-03-03 08:00:00+00');
 
 INSERT INTO messages (id, user_id, content, latitude, longitude, visibility, hashtags, likes_count, comments_count, created_at) VALUES
   ('a0000001-0000-0000-0000-000000000001', 'a1111111-1111-1111-1111-111111111111',
