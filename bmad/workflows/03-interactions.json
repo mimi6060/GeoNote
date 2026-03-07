@@ -1,0 +1,154 @@
+{
+  "workflows": [
+    {
+      "name": "toggle_like",
+      "description": "Ajouter ou retirer un like sur un message",
+      "trigger": "button_click:like",
+      "auth_required": true,
+      "steps": [
+        {
+          "id": "check_existing_like",
+          "type": "database_query",
+          "table": "interactions",
+          "where": {
+            "message_id": "{{message_id}}",
+            "user_id": "{{current_user.id}}",
+            "type": "like"
+          },
+          "mode": "select_one"
+        },
+        {
+          "id": "toggle",
+          "type": "condition",
+          "if": "{{check_existing_like.result}} != null",
+          "then": {
+            "id": "remove_like",
+            "type": "database_delete",
+            "table": "interactions",
+            "where": {
+              "id": "{{check_existing_like.result.id}}"
+            }
+          },
+          "else": {
+            "id": "add_like",
+            "type": "database_insert",
+            "table": "interactions",
+            "data": {
+              "message_id": "{{message_id}}",
+              "user_id": "{{current_user.id}}",
+              "type": "like"
+            }
+          }
+        },
+        {
+          "id": "get_updated_count",
+          "type": "database_query",
+          "table": "messages",
+          "select": ["likes_count"],
+          "where": { "id": "{{message_id}}" },
+          "mode": "select_one"
+        },
+        {
+          "id": "response",
+          "type": "response",
+          "status": 200,
+          "data": {
+            "liked": "{{check_existing_like.result}} == null",
+            "likes_count": "{{get_updated_count.result.likes_count}}"
+          }
+        }
+      ]
+    },
+    {
+      "name": "add_comment",
+      "description": "Ajouter un commentaire sur un message",
+      "trigger": "form_submit:comment-form",
+      "auth_required": true,
+      "steps": [
+        {
+          "id": "validate",
+          "type": "validation",
+          "rules": [
+            {
+              "field": "content",
+              "checks": [
+                { "type": "required", "error": "Le commentaire ne peut pas etre vide" },
+                { "type": "max_length", "value": 300, "error": "300 caracteres maximum" }
+              ]
+            }
+          ]
+        },
+        {
+          "id": "sanitize",
+          "type": "transform",
+          "action": "sanitize_html",
+          "input": "{{content}}",
+          "output_field": "content_clean"
+        },
+        {
+          "id": "insert_comment",
+          "type": "database_insert",
+          "table": "interactions",
+          "data": {
+            "message_id": "{{message_id}}",
+            "user_id": "{{current_user.id}}",
+            "type": "comment",
+            "content": "{{content_clean}}"
+          },
+          "return_fields": ["id", "created_at"]
+        },
+        {
+          "id": "response",
+          "type": "response",
+          "status": 201,
+          "data": {
+            "message": "Commentaire ajoute",
+            "comment": {
+              "id": "{{insert_comment.id}}",
+              "content": "{{content_clean}}",
+              "username": "{{current_user.username}}",
+              "created_at": "{{insert_comment.created_at}}"
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "get_comments",
+      "description": "Recuperer les commentaires d'un message",
+      "trigger": "button_click:open_comments",
+      "auth_required": false,
+      "steps": [
+        {
+          "id": "fetch_comments",
+          "type": "database_query",
+          "table": "interactions",
+          "join": [
+            { "table": "users", "on": "interactions.user_id = users.id" }
+          ],
+          "select": [
+            "interactions.id",
+            "interactions.content",
+            "interactions.created_at",
+            "users.username"
+          ],
+          "where": {
+            "message_id": "{{message_id}}",
+            "type": "comment"
+          },
+          "order_by": { "field": "created_at", "direction": "asc" },
+          "limit": 50
+        },
+        {
+          "id": "response",
+          "type": "response",
+          "status": 200,
+          "data": {
+            "comments": "{{fetch_comments.results}}",
+            "count": "{{fetch_comments.results.length}}"
+          }
+        }
+      ]
+    }
+  ]
+}

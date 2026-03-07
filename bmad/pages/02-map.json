@@ -1,0 +1,201 @@
+{
+  "page": {
+    "name": "Carte Principale",
+    "route": "/map",
+    "description": "Carte interactive avec tous les messages geolocalises",
+    "layout": "full-screen",
+    "auth_required": false,
+    "components": [
+      {
+        "id": "top-bar",
+        "type": "header",
+        "position": "fixed",
+        "z_index": 1000,
+        "style": {
+          "background": "white",
+          "padding": "8px 16px",
+          "box_shadow": "0 2px 8px rgba(0,0,0,0.1)",
+          "display": "flex",
+          "justify_content": "space-between",
+          "align_items": "center"
+        },
+        "children": [
+          {
+            "id": "logo-small",
+            "type": "text",
+            "text": "GeoNote",
+            "style": { "font_weight": "bold", "font_size": "1.2rem", "color": "#333" }
+          },
+          {
+            "id": "search-bar",
+            "type": "input",
+            "placeholder": "Rechercher #hashtag...",
+            "on_change": "workflow:filter_by_hashtag",
+            "style": { "width": "250px", "padding": "8px 12px", "border_radius": "20px" }
+          },
+          {
+            "id": "user-menu",
+            "type": "dropdown",
+            "trigger": { "type": "avatar", "fallback_icon": "user" },
+            "items": [
+              { "label": "Mon profil", "action": "navigate:/profile" },
+              { "label": "Deconnexion", "action": "workflow:logout" }
+            ]
+          }
+        ]
+      },
+      {
+        "id": "map-container",
+        "type": "map",
+        "provider": "leaflet",
+        "config": {
+          "center": [48.8566, 2.3522],
+          "zoom": 14,
+          "min_zoom": 10,
+          "max_zoom": 18,
+          "tile_layer": "https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png",
+          "attribution": "OpenStreetMap"
+        },
+        "data_source": "workflow:get_nearby_messages",
+        "markers": {
+          "source_field": "messages",
+          "latitude_field": "latitude",
+          "longitude_field": "longitude",
+          "cluster": true,
+          "cluster_radius": 50,
+          "icon": {
+            "type": "custom",
+            "shape": "circle",
+            "color": "#FF6B35",
+            "size": 12
+          },
+          "popup": {
+            "template": "message-popup",
+            "components": [
+              {
+                "type": "text",
+                "field": "username",
+                "style": { "font_weight": "bold", "color": "#333" }
+              },
+              {
+                "type": "text",
+                "field": "content",
+                "style": { "margin": "8px 0" }
+              },
+              {
+                "type": "row",
+                "children": [
+                  {
+                    "type": "button",
+                    "icon": "heart",
+                    "text": "{likes_count}",
+                    "action": "workflow:toggle_like",
+                    "style": { "color": "#FF6B35" }
+                  },
+                  {
+                    "type": "button",
+                    "icon": "message-circle",
+                    "text": "{comments_count}",
+                    "action": "workflow:open_comments",
+                    "style": { "color": "#666" }
+                  },
+                  {
+                    "type": "text",
+                    "field": "created_at",
+                    "format": "relative_time",
+                    "style": { "color": "#999", "font_size": "0.8rem" }
+                  }
+                ]
+              }
+            ]
+          }
+        },
+        "style": {
+          "width": "100vw",
+          "height": "100vh",
+          "position": "absolute",
+          "top": 0,
+          "left": 0
+        }
+      },
+      {
+        "id": "filters-panel",
+        "type": "panel",
+        "position": "bottom-left",
+        "collapsible": true,
+        "default_state": "collapsed",
+        "style": {
+          "background": "white",
+          "border_radius": "12px",
+          "padding": "16px",
+          "margin": "16px",
+          "box_shadow": "0 2px 12px rgba(0,0,0,0.15)",
+          "z_index": 999
+        },
+        "children": [
+          {
+            "id": "filter-distance",
+            "type": "slider",
+            "label": "Distance",
+            "min": 100,
+            "max": 5000,
+            "step": 100,
+            "default": 500,
+            "unit": "m",
+            "on_change": "workflow:update_radius"
+          },
+          {
+            "id": "filter-sort",
+            "type": "select",
+            "label": "Trier par",
+            "options": [
+              { "value": "distance", "label": "Proximite" },
+              { "value": "recent", "label": "Plus recents" },
+              { "value": "popular", "label": "Populaires" }
+            ],
+            "default": "distance",
+            "on_change": "workflow:update_sort"
+          }
+        ]
+      },
+      {
+        "id": "fab-add-message",
+        "type": "button",
+        "icon": "plus",
+        "shape": "circle",
+        "size": "large",
+        "action": "workflow:open_create_message",
+        "style": {
+          "position": "fixed",
+          "bottom": "24px",
+          "right": "24px",
+          "width": "60px",
+          "height": "60px",
+          "background": "#FF6B35",
+          "color": "white",
+          "border_radius": "50%",
+          "box_shadow": "0 4px 16px rgba(255,107,53,0.4)",
+          "z_index": 1000
+        }
+      },
+      {
+        "id": "locate-me-btn",
+        "type": "button",
+        "icon": "crosshair",
+        "action": "workflow:center_on_user",
+        "style": {
+          "position": "fixed",
+          "bottom": "24px",
+          "left": "24px",
+          "width": "48px",
+          "height": "48px",
+          "background": "white",
+          "color": "#333",
+          "border_radius": "50%",
+          "box_shadow": "0 2px 8px rgba(0,0,0,0.15)",
+          "z_index": 1000
+        }
+      }
+    ]
+  }
+}

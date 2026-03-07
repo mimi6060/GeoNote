@@ -1,0 +1,123 @@
+{
+  "page": {
+    "name": "Landing Page - Beta",
+    "route": "/",
+    "description": "Page d'accueil pour presentation et collecte emails beta",
+    "layout": "single-column-centered",
+    "auth_required": false,
+    "components": [
+      {
+        "id": "hero-section",
+        "type": "section",
+        "style": {
+          "background": "gradient-primary",
+          "padding": "80px 20px",
+          "text_align": "center",
+          "min_height": "100vh",
+          "display": "flex",
+          "flex_direction": "column",
+          "justify_content": "center"
+        },
+        "children": [
+          {
+            "id": "logo",
+            "type": "image",
+            "src": "/assets/geonote-logo.svg",
+            "alt": "GeoNote",
+            "style": { "width": "120px", "margin_bottom": "24px" }
+          },
+          {
+            "id": "headline",
+            "type": "heading",
+            "level": 1,
+            "text": "GeoNote",
+            "style": { "font_size": "3rem", "color": "white", "margin_bottom": "12px" }
+          },
+          {
+            "id": "subheadline",
+            "type": "heading",
+            "level": 2,
+            "text": "Laissez des messages. Partout. Pour tout le monde.",
+            "style": { "font_size": "1.3rem", "color": "white", "opacity": 0.9, "font_weight": "normal" }
+          },
+          {
+            "id": "description",
+            "type": "paragraph",
+            "text": "GeoNote transforme le monde en un reseau social geolocalise. Laissez des notes, des bons plans ou des souvenirs attaches a un lieu. Decouvrez ce que les autres ont partage autour de vous.",
+            "style": { "max_width": "600px", "margin": "24px auto", "color": "white", "opacity": 0.85 }
+          },
+          {
+            "id": "features-grid",
+            "type": "grid",
+            "columns": 3,
+            "gap": "24px",
+            "style": { "max_width": "800px", "margin": "40px auto" },
+            "children": [
+              {
+                "type": "card",
+                "icon": "map-pin",
+                "title": "Geolocalise",
+                "text": "Chaque message est attache a un lieu precis"
+              },
+              {
+                "type": "card",
+                "icon": "users",
+                "title": "Social",
+                "text": "Likez et commentez les notes autour de vous"
+              },
+              {
+                "type": "card",
+                "icon": "eye",
+                "title": "Decouverte",
+                "text": "Explorez les messages caches dans votre quartier"
+              }
+            ]
+          },
+          {
+            "id": "beta-form",
+            "type": "form",
+            "action": "workflow:beta_signup",
+            "style": { "max_width": "450px", "margin": "40px auto" },
+            "fields": [
+              {
+                "name": "email",
+                "type": "email",
+                "placeholder": "votre@email.com",
+                "required": true,
+                "validation": "email",
+                "style": { "padding": "14px", "border_radius": "8px", "font_size": "1rem" }
+              }
+            ],
+            "submit": {
+              "text": "Rejoindre la beta",
+              "style": {
+                "background": "#FF6B35",
+                "color": "white",
+                "padding": "14px 32px",
+                "border_radius": "8px",
+                "font_size": "1.1rem",
+                "font_weight": "bold"
+              }
+            },
+            "success_message": "Merci ! Vous serez informe(e) du lancement.",
+            "error_message": "Cet email est deja enregistre."
+          },
+          {
+            "id": "cta-explore",
+            "type": "button",
+            "text": "Explorer la carte",
+            "action": "navigate:/map",
+            "style": {
+              "margin_top": "20px",
+              "background": "transparent",
+              "border": "2px solid white",
+              "color": "white",
+              "padding": "12px 28px",
+              "border_radius": "8px"
+            }
+          }
+        ]
+      }
+    ]
+  }
+}

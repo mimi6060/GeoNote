@@ -1,0 +1,245 @@
+{
+  "test_data": {
+    "users": [
+      {
+        "id": "u-001",
+        "username": "alice_explore",
+        "email": "alice@test.com",
+        "is_anonymous": false,
+        "created_at": "2026-03-01T10:00:00Z"
+      },
+      {
+        "id": "u-002",
+        "username": "bob_runner",
+        "email": "bob@test.com",
+        "is_anonymous": false,
+        "created_at": "2026-03-01T11:00:00Z"
+      },
+      {
+        "id": "u-003",
+        "username": "charlie_photo",
+        "email": "charlie@test.com",
+        "is_anonymous": false,
+        "created_at": "2026-03-02T09:00:00Z"
+      },
+      {
+        "id": "u-004",
+        "username": "diana_local",
+        "email": "diana@test.com",
+        "is_anonymous": false,
+        "created_at": "2026-03-02T14:00:00Z"
+      },
+      {
+        "id": "u-005",
+        "username": "anon_user",
+        "email": "anon@test.com",
+        "is_anonymous": true,
+        "created_at": "2026-03-03T08:00:00Z"
+      }
+    ],
+    "messages": [
+      {
+        "id": "m-001",
+        "user_id": "u-001",
+        "content": "Superbe vue depuis la Tour Eiffel ce matin ! #paris #tourisme",
+        "latitude": 48.8584,
+        "longitude": 2.2945,
+        "visibility": "public",
+        "hashtags": ["paris", "tourisme"],
+        "likes_count": 12,
+        "comments_count": 3
+      },
+      {
+        "id": "m-002",
+        "user_id": "u-002",
+        "content": "Meilleur cafe du quartier, je recommande ! #cafe #bonplan",
+        "latitude": 48.8566,
+        "longitude": 2.3522,
+        "visibility": "public",
+        "hashtags": ["cafe", "bonplan"],
+        "likes_count": 8,
+        "comments_count": 1
+      },
+      {
+        "id": "m-003",
+        "user_id": "u-003",
+        "content": "Street art incroyable dans cette ruelle #art #streetart",
+        "latitude": 48.8650,
+        "longitude": 2.3800,
+        "visibility": "public",
+        "hashtags": ["art", "streetart"],
+        "likes_count": 25,
+        "comments_count": 5
+      },
+      {
+        "id": "m-004",
+        "user_id": "u-001",
+        "content": "Petit parc cache, parfait pour lire #calme #nature",
+        "latitude": 48.8462,
+        "longitude": 2.3371,
+        "visibility": "public",
+        "hashtags": ["calme", "nature"],
+        "likes_count": 6,
+        "comments_count": 0
+      },
+      {
+        "id": "m-005",
+        "user_id": "u-004",
+        "content": "Attention travaux rue de Rivoli, passage difficile #info #travaux",
+        "latitude": 48.8606,
+        "longitude": 2.3376,
+        "visibility": "public",
+        "hashtags": ["info", "travaux"],
+        "likes_count": 3,
+        "comments_count": 2
+      },
+      {
+        "id": "m-006",
+        "user_id": "u-005",
+        "content": "Quelqu'un a perdu des cles pres du metro Chatelet #perdu",
+        "latitude": 48.8584,
+        "longitude": 2.3474,
+        "visibility": "public",
+        "hashtags": ["perdu"],
+        "likes_count": 1,
+        "comments_count": 4
+      },
+      {
+        "id": "m-007",
+        "user_id": "u-002",
+        "content": "Concert gratuit ce soir au Sacre-Coeur ! #musique #gratuit",
+        "latitude": 48.8867,
+        "longitude": 2.3431,
+        "visibility": "public",
+        "hashtags": ["musique", "gratuit"],
+        "likes_count": 45,
+        "comments_count": 8
+      },
+      {
+        "id": "m-008",
+        "user_id": "u-003",
+        "content": "Le marche bio du dimanche est top #bio #marche",
+        "latitude": 48.8530,
+        "longitude": 2.3499,
+        "visibility": "public",
+        "hashtags": ["bio", "marche"],
+        "likes_count": 15,
+        "comments_count": 2
+      },
+      {
+        "id": "m-009",
+        "user_id": "u-004",
+        "content": "Spot secret pour voir le coucher de soleil #sunset #secret",
+        "latitude": 48.8420,
+        "longitude": 2.2880,
+        "visibility": "friends",
+        "hashtags": ["sunset", "secret"],
+        "likes_count": 20,
+        "comments_count": 6
+      },
+      {
+        "id": "m-010",
+        "user_id": "u-001",
+        "content": "Nouveau restaurant japonais, excellent ramen ! #food #japon",
+        "latitude": 48.8690,
+        "longitude": 2.3320,
+        "visibility": "public",
+        "hashtags": ["food", "japon"],
+        "likes_count": 18,
+        "comments_count": 3
+      },
+      {
+        "id": "m-011",
+        "user_id": "u-005",
+        "content": "Wifi gratuit dans ce parc, pratique pour bosser #wifi #remote",
+        "latitude": 48.8651,
+        "longitude": 2.3212,
+        "visibility": "public",
+        "hashtags": ["wifi", "remote"],
+        "likes_count": 30,
+        "comments_count": 4
+      },
+      {
+        "id": "m-012",
+        "user_id": "u-002",
+        "content": "Balade le long du canal Saint-Martin #balade #canal",
+        "latitude": 48.8710,
+        "longitude": 2.3650,
+        "visibility": "public",
+        "hashtags": ["balade", "canal"],
+        "likes_count": 22,
+        "comments_count": 1
+      },
+      {
+        "id": "m-013",
+        "user_id": "u-003",
+        "content": "Note perso : revenir ici pour photographier la nuit",
+        "latitude": 48.8530,
+        "longitude": 2.3690,
+        "visibility": "private",
+        "hashtags": [],
+        "likes_count": 0,
+        "comments_count": 0
+      },
+      {
+        "id": "m-014",
+        "user_id": "u-004",
+        "content": "Place parfaite pour un pique-nique #picnic #ete",
+        "latitude": 48.8556,
+        "longitude": 2.3130,
+        "visibility": "public",
+        "hashtags": ["picnic", "ete"],
+        "likes_count": 9,
+        "comments_count": 2
+      },
+      {
+        "id": "m-015",
+        "user_id": "u-001",
+        "content": "Librairie independante avec une super selection #livres #culture",
+        "latitude": 48.8490,
+        "longitude": 2.3560,
+        "visibility": "public",
+        "hashtags": ["livres", "culture"],
+        "likes_count": 14,
+        "comments_count": 3
+      }
+    ],
+    "interactions": [
+      {
+        "id": "i-001",
+        "message_id": "m-001",
+        "user_id": "u-002",
+        "type": "like",
+        "content": null
+      },
+      {
+        "id": "i-002",
+        "message_id": "m-001",
+        "user_id": "u-003",
+        "type": "comment",
+        "content": "Trop beau ! J'y etais hier aussi"
+      },
+      {
+        "id": "i-003",
+        "message_id": "m-007",
+        "user_id": "u-001",
+        "type": "like",
+        "content": null
+      },
+      {
+        "id": "i-004",
+        "message_id": "m-007",
+        "user_id": "u-004",
+        "type": "comment",
+        "content": "C'est a quelle heure exactement ?"
+      },
+      {
+        "id": "i-005",
+        "message_id": "m-003",
+        "user_id": "u-005",
+        "type": "comment",
+        "content": "Tu peux donner l'adresse exacte ?"
+      }
+    ]
+  }
+}

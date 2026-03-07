@@ -1,0 +1,192 @@
+{
+  "workflows": [
+    {
+      "name": "beta_signup",
+      "description": "Inscription a la liste beta",
+      "trigger": "form_submit:beta-form",
+      "auth_required": false,
+      "steps": [
+        {
+          "id": "validate_email",
+          "type": "validation",
+          "rules": [
+            {
+              "field": "email",
+              "checks": [
+                { "type": "required", "error": "L'email est requis" },
+                { "type": "email", "error": "Format email invalide" }
+              ]
+            }
+          ]
+        },
+        {
+          "id": "check_duplicate",
+          "type": "database_query",
+          "table": "beta_signups",
+          "where": { "email": "{{email}}" },
+          "mode": "select_one"
+        },
+        {
+          "id": "handle_duplicate",
+          "type": "condition",
+          "if": "{{check_duplicate.result}} != null",
+          "then": {
+            "type": "response",
+            "status": 409,
+            "data": { "error": "Cet email est deja enregistre" }
+          }
+        },
+        {
+          "id": "insert_signup",
+          "type": "database_insert",
+          "table": "beta_signups",
+          "data": {
+            "email": "{{email}}"
+          }
+        },
+        {
+          "id": "response",
+          "type": "response",
+          "status": 201,
+          "data": { "message": "Inscription reussie ! Vous serez informe(e) du lancement." }
+        }
+      ]
+    },
+    {
+      "name": "get_user_messages",
+      "description": "Recuperer les messages d'un utilisateur pour son profil",
+      "trigger": "page_load:profile",
+      "auth_required": true,
+      "steps": [
+        {
+          "id": "fetch_messages",
+          "type": "database_query",
+          "table": "messages",
+          "where": { "user_id": "{{current_user.id}}" },
+          "order_by": { "field": "created_at", "direction": "desc" },
+          "limit": 100
+        },
+        {
+          "id": "compute_stats",
+          "type": "aggregate",
+          "input": "{{fetch_messages.results}}",
+          "operations": {
+            "total_messages": "count",
+            "total_likes": "sum:likes_count"
+          }
+        },
+        {
+          "id": "response",
+          "type": "response",
+          "status": 200,
+          "data": {
+            "messages": "{{fetch_messages.results}}",
+            "stats": {
+              "user_messages_count": "{{compute_stats.total_messages}}",
+              "user_total_likes": "{{compute_stats.total_likes}}"
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "delete_message",
+      "description": "Supprimer un message de l'utilisateur",
+      "trigger": "button_click:delete",
+      "auth_required": true,
+      "steps": [
+        {
+          "id": "verify_ownership",
+          "type": "database_query",
+          "table": "messages",
+          "where": {
+            "id": "{{message_id}}",
+            "user_id": "{{current_user.id}}"
+          },
+          "mode": "select_one"
+        },
+        {
+          "id": "check_ownership",
+          "type": "condition",
+          "if": "{{verify_ownership.result}} == null",
+          "then": {
+            "type": "response",
+            "status": 403,
+            "data": { "error": "Vous ne pouvez supprimer que vos propres messages" }
+          }
+        },
+        {
+          "id": "delete",
+          "type": "database_delete",
+          "table": "messages",
+          "where": { "id": "{{message_id}}" }
+        },
+        {
+          "id": "response",
+          "type": "response",
+          "status": 200,
+          "data": { "message": "Message supprime" }
+        }
+      ]
+    },
+    {
+      "name": "center_on_user",
+      "description": "Centrer la carte sur la position de l'utilisateur",
+      "trigger": "button_click:locate-me-btn",
+      "auth_required": false,
+      "steps": [
+        {
+          "id": "get_location",
+          "type": "geolocation",
+          "action": "get_current_position",
+          "high_accuracy": true
+        },
+        {
+          "id": "update_map",
+          "type": "ui_action",
+          "action": "map.setView",
+          "params": {
+            "center": ["{{get_location.latitude}}", "{{get_location.longitude}}"],
+            "zoom": 16,
+            "animate": true
+          }
+        },
+        {
+          "id": "refresh_data",
+          "type": "trigger_workflow",
+          "workflow": "get_nearby_messages",
+          "params": {
+            "latitude": "{{get_location.latitude}}",
+            "longitude": "{{get_location.longitude}}"
+          }
+        }
+      ]
+    },
+    {
+      "name": "filter_by_hashtag",
+      "description": "Filtrer les messages par hashtag",
+      "trigger": "input_change:search-bar",
+      "auth_required": false,
+      "debounce_ms": 300,
+      "steps": [
+        {
+          "id": "extract_hashtag",
+          "type": "transform",
+          "action": "regex_extract",
+          "input": "{{search_value}}",
+          "pattern": "#?([a-zA-Z0-9_]+)",
+          "output_field": "clean_hashtag",
+          "transform": "lowercase"
+        },
+        {
+          "id": "refresh_with_filter",
+          "type": "trigger_workflow",
+          "workflow": "get_nearby_messages",
+          "params": {
+            "hashtag": "{{clean_hashtag}}"
+          }
+        }
+      ]
+    }
+  ]
+}

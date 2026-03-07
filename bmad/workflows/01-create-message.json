@@ -1,0 +1,92 @@
+{
+  "workflow": {
+    "name": "create_message",
+    "description": "Creation d'un message geolocalise",
+    "trigger": "form_submit:message-form",
+    "auth_required": true,
+    "steps": [
+      {
+        "id": "validate_input",
+        "type": "validation",
+        "rules": [
+          {
+            "field": "content",
+            "checks": [
+              { "type": "required", "error": "Le message ne peut pas etre vide" },
+              { "type": "min_length", "value": 1, "error": "Le message doit contenir au moins 1 caractere" },
+              { "type": "max_length", "value": 500, "error": "Le message ne peut pas depasser 500 caracteres" }
+            ]
+          },
+          {
+            "field": "latitude",
+            "checks": [
+              { "type": "required", "error": "Position GPS requise" },
+              { "type": "range", "min": -90, "max": 90, "error": "Latitude invalide" }
+            ]
+          },
+          {
+            "field": "longitude",
+            "checks": [
+              { "type": "required", "error": "Position GPS requise" },
+              { "type": "range", "min": -180, "max": 180, "error": "Longitude invalide" }
+            ]
+          },
+          {
+            "field": "visibility",
+            "checks": [
+              { "type": "enum", "values": ["public", "friends", "private"], "error": "Visibilite invalide" }
+            ]
+          }
+        ],
+        "on_fail": "return_errors"
+      },
+      {
+        "id": "extract_hashtags",
+        "type": "transform",
+        "action": "regex_extract_all",
+        "input": "{{content}}",
+        "pattern": "#([a-zA-Z0-9_]+)",
+        "output_field": "hashtags",
+        "transform": "lowercase"
+      },
+      {
+        "id": "sanitize_content",
+        "type": "transform",
+        "action": "sanitize_html",
+        "input": "{{content}}",
+        "output_field": "content_clean"
+      },
+      {
+        "id": "insert_message",
+        "type": "database_insert",
+        "table": "messages",
+        "data": {
+          "user_id": "{{current_user.id}}",
+          "content": "{{content_clean}}",
+          "latitude": "{{latitude}}",
+          "longitude": "{{longitude}}",
+          "visibility": "{{visibility}}",
+          "hashtags": "{{hashtags}}",
+          "likes_count": 0,
+          "comments_count": 0
+        },
+        "return_fields": ["id", "created_at"]
+      },
+      {
+        "id": "success_response",
+        "type": "response",
+        "status": 201,
+        "data": {
+          "message": "Message publie avec succes",
+          "id": "{{insert_message.id}}",
+          "created_at": "{{insert_message.created_at}}"
+        }
+      }
+    ],
+    "error_handler": {
+      "type": "response",
+      "status": 500,
+      "data": { "error": "Erreur lors de la creation du message" }
+    }
+  }
+}

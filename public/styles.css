@@ -1,0 +1,322 @@
+/* GeoNote MVP - Styles complets */
+
+:root {
+  --gn-primary: #FF6B35;
+  --gn-primary-dark: #E55A2B;
+  --gn-text: #333;
+  --gn-text-light: #666;
+  --gn-text-muted: #999;
+  --gn-bg: #f8f9fa;
+  --gn-white: #fff;
+  --gn-border: #e0e0e0;
+  --gn-radius: 8px;
+  --gn-shadow: 0 2px 12px rgba(0, 0, 0, 0.12);
+  --gn-gradient: linear-gradient(135deg, #FF6B35 0%, #FF8F65 100%);
+}
+
+* { margin: 0; padding: 0; box-sizing: border-box; }
+body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; color: var(--gn-text); }
+a { color: var(--gn-primary); }
+
+/* ---- Top bar ---- */
+.gn-topbar {
+  position: fixed; top: 0; left: 0; right: 0; z-index: 1000;
+  background: var(--gn-white); padding: 8px 16px;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+  display: flex; justify-content: space-between; align-items: center;
+  gap: 12px;
+}
+.gn-topbar-logo { font-size: 1.2rem; color: var(--gn-text); text-decoration: none; font-weight: bold; white-space: nowrap; }
+.gn-topbar-search {
+  flex: 1; max-width: 280px;
+  padding: 8px 14px; border: 1px solid var(--gn-border); border-radius: 20px;
+  font-size: 0.9rem; outline: none;
+}
+.gn-topbar-search:focus { border-color: var(--gn-primary); }
+.gn-topbar-link { text-decoration: none; color: var(--gn-text-light); font-size: 0.9rem; white-space: nowrap; }
+.gn-topbar-link:hover { color: var(--gn-primary); }
+
+/* ---- Cluster ---- */
+.geonote-cluster-icon { background: none; }
+.geonote-cluster {
+  width: 40px; height: 40px;
+  background: var(--gn-primary); color: var(--gn-white);
+  border-radius: 50%;
+  display: flex; align-items: center; justify-content: center;
+  font-weight: bold; font-size: 14px;
+  border: 3px solid var(--gn-white);
+  box-shadow: var(--gn-shadow);
+}
+
+/* ---- Popup ---- */
+.geonote-popup .leaflet-popup-content-wrapper {
+  border-radius: var(--gn-radius);
+  box-shadow: var(--gn-shadow);
+  padding: 0;
+}
+.geonote-popup .leaflet-popup-content { margin: 0; min-width: 240px; }
+.geonote-popup-content { padding: 14px; }
+.geonote-popup-header {
+  display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;
+}
+.geonote-popup-header strong { color: var(--gn-text); font-size: 0.9rem; }
+.geonote-popup-time { color: var(--gn-text-muted); font-size: 0.75rem; }
+.geonote-popup-text { margin: 8px 0; font-size: 0.95rem; line-height: 1.4; word-break: break-word; }
+.geonote-popup-tags { margin: 8px 0; }
+.geonote-hashtag {
+  display: inline-block;
+  background: #FFF0E8; color: var(--gn-primary);
+  padding: 2px 8px; border-radius: 12px;
+  font-size: 0.8rem; margin: 2px 4px 2px 0;
+  cursor: pointer; transition: background 0.2s;
+}
+.geonote-hashtag:hover { background: #FFE0D0; }
+.geonote-popup-actions {
+  display: flex; gap: 16px; margin-top: 10px; padding-top: 10px;
+  border-top: 1px solid var(--gn-border);
+}
+.geonote-popup-actions button {
+  display: flex; align-items: center; gap: 4px;
+  background: none; border: none;
+  color: var(--gn-text-light); cursor: pointer;
+  font-size: 0.85rem; transition: color 0.2s;
+}
+.geonote-popup-actions button:hover { color: var(--gn-primary); }
+
+/* ---- Panneau commentaires ---- */
+.geonote-comments-panel {
+  position: fixed; bottom: 0; left: 0; right: 0;
+  max-height: 60vh;
+  background: var(--gn-white);
+  border-radius: 16px 16px 0 0;
+  box-shadow: 0 -4px 20px rgba(0,0,0,0.15);
+  z-index: 2000;
+  display: flex; flex-direction: column;
+  animation: slideUp 0.3s ease;
+}
+@keyframes slideUp {
+  from { transform: translateY(100%); }
+  to { transform: translateY(0); }
+}
+.geonote-comments-header {
+  display: flex; justify-content: space-between; align-items: center;
+  padding: 16px; border-bottom: 1px solid var(--gn-border);
+}
+.geonote-comments-header h3 { font-size: 1rem; }
+.geonote-comments-header button {
+  background: none; border: none; font-size: 1.2rem; cursor: pointer; color: var(--gn-text-light);
+}
+.geonote-comments-list { flex: 1; overflow-y: auto; padding: 16px; }
+.geonote-comment {
+  margin-bottom: 16px; padding-bottom: 12px;
+  border-bottom: 1px solid #f0f0f0;
+}
+.geonote-comment strong { font-size: 0.85rem; color: var(--gn-text); }
+.geonote-comment p { margin: 4px 0; font-size: 0.9rem; }
+.geonote-comment-time { color: var(--gn-text-muted); font-size: 0.75rem; }
+.geonote-empty { color: var(--gn-text-muted); text-align: center; padding: 24px; }
+
+.geonote-comment-form {
+  display: flex; padding: 12px 16px; gap: 8px;
+  border-top: 1px solid var(--gn-border);
+}
+.geonote-comment-form input {
+  flex: 1; padding: 10px 14px;
+  border: 1px solid var(--gn-border); border-radius: 20px;
+  font-size: 0.9rem; outline: none;
+}
+.geonote-comment-form input:focus { border-color: var(--gn-primary); }
+.geonote-comment-form button {
+  background: var(--gn-primary); color: var(--gn-white);
+  border: none; border-radius: 20px; padding: 10px 20px;
+  font-size: 0.9rem; cursor: pointer; transition: background 0.2s;
+}
+.geonote-comment-form button:hover { background: var(--gn-primary-dark); }
+
+/* ---- Notifications ---- */
+.geonote-notification {
+  position: fixed; top: 20px; left: 50%; transform: translateX(-50%);
+  padding: 12px 24px; border-radius: var(--gn-radius);
+  font-size: 0.9rem; z-index: 9999;
+  box-shadow: var(--gn-shadow); transition: opacity 0.3s;
+}
+.geonote-notification-success { background: #4CAF50; color: white; }
+.geonote-notification-error { background: #f44336; color: white; }
+.geonote-notification-info { background: var(--gn-text); color: white; }
+.geonote-notification-fade { opacity: 0; }
+
+/* ---- FAB ---- */
+.geonote-fab {
+  position: fixed; bottom: 24px; right: 24px;
+  width: 60px; height: 60px;
+  background: var(--gn-primary); color: var(--gn-white);
+  border: none; border-radius: 50%;
+  font-size: 1.8rem; cursor: pointer;
+  box-shadow: 0 4px 16px rgba(255,107,53,0.4);
+  z-index: 1000;
+  transition: transform 0.2s, box-shadow 0.2s;
+}
+.geonote-fab:hover { transform: scale(1.1); box-shadow: 0 6px 20px rgba(255,107,53,0.5); }
+
+/* ---- Locate button ---- */
+.gn-locate-btn {
+  position: fixed; bottom: 24px; left: 24px;
+  width: 48px; height: 48px;
+  background: var(--gn-white); border: none; border-radius: 50%;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.15); cursor: pointer;
+  z-index: 1000; font-size: 1.2rem;
+  display: flex; align-items: center; justify-content: center;
+  transition: background 0.2s;
+}
+.gn-locate-btn:hover { background: #f5f5f5; }
+
+/* ---- Modal creation ---- */
+.geonote-modal-overlay {
+  position: fixed; inset: 0;
+  background: rgba(0,0,0,0.5);
+  display: none; align-items: center; justify-content: center;
+  z-index: 3000;
+}
+.geonote-modal {
+  background: var(--gn-white); border-radius: 16px;
+  width: 90%; max-width: 480px;
+  max-height: 90vh; overflow-y: auto;
+  padding: 24px;
+  box-shadow: 0 8px 32px rgba(0,0,0,0.2);
+}
+.geonote-modal h2 { margin-bottom: 16px; }
+.geonote-modal textarea {
+  width: 100%; padding: 12px;
+  border: 1px solid var(--gn-border); border-radius: var(--gn-radius);
+  font-size: 1rem; resize: vertical; min-height: 100px;
+  font-family: inherit;
+}
+.geonote-modal textarea:focus { outline: none; border-color: var(--gn-primary); }
+.geonote-char-count { text-align: right; color: var(--gn-text-muted); font-size: 0.8rem; margin-top: 4px; }
+
+/* ---- Filtres ---- */
+.geonote-filters {
+  position: fixed; bottom: 100px; left: 16px;
+  background: var(--gn-white); border-radius: 12px;
+  padding: 16px; box-shadow: var(--gn-shadow);
+  z-index: 999; min-width: 200px;
+}
+.geonote-filters label { display: block; font-size: 0.85rem; color: var(--gn-text-light); margin-bottom: 4px; }
+.geonote-filters input[type="range"] { width: 100%; accent-color: var(--gn-primary); }
+.geonote-filters select {
+  width: 100%; padding: 8px; border: 1px solid var(--gn-border);
+  border-radius: var(--gn-radius); margin-top: 8px; font-size: 0.9rem;
+}
+
+/* ---- Message count badge ---- */
+.gn-msg-count {
+  position: fixed; top: 52px; left: 50%; transform: translateX(-50%);
+  background: var(--gn-white); padding: 6px 16px; border-radius: 20px;
+  box-shadow: var(--gn-shadow); z-index: 999;
+  font-size: 0.85rem; color: var(--gn-text-light);
+}
+
+/* ---- Landing ---- */
+.geonote-landing {
+  min-height: 100vh;
+  background: var(--gn-gradient);
+  display: flex; flex-direction: column;
+  align-items: center; justify-content: center;
+  text-align: center; padding: 40px 20px;
+  color: var(--gn-white);
+}
+.geonote-landing h1 { font-size: 3rem; margin-bottom: 12px; }
+.geonote-landing h2 { font-size: 1.3rem; font-weight: normal; opacity: 0.9; }
+.geonote-landing p { max-width: 600px; margin: 24px auto; opacity: 0.85; line-height: 1.6; }
+.geonote-features {
+  display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: 24px; max-width: 800px; margin: 40px auto; width: 100%;
+}
+.geonote-feature-card {
+  background: rgba(255,255,255,0.15);
+  border-radius: 12px; padding: 24px;
+  backdrop-filter: blur(4px);
+}
+.geonote-feature-card h3 { margin-top: 12px; }
+.geonote-beta-form {
+  display: flex; gap: 8px; margin-top: 40px; max-width: 450px; width: 100%;
+}
+.geonote-beta-form input {
+  flex: 1; padding: 14px; border: none;
+  border-radius: var(--gn-radius); font-size: 1rem;
+}
+.geonote-beta-form button {
+  background: var(--gn-primary-dark); color: var(--gn-white);
+  border: none; border-radius: var(--gn-radius);
+  padding: 14px 32px; font-size: 1.1rem; font-weight: bold;
+  cursor: pointer; transition: background 0.2s; white-space: nowrap;
+}
+.geonote-beta-form button:hover { background: #D04A1B; }
+.gn-explore-btn {
+  display: inline-block; margin-top: 24px; padding: 14px 32px;
+  border: 2px solid white; border-radius: var(--gn-radius);
+  color: white; text-decoration: none; font-size: 1rem; transition: background 0.2s;
+}
+.gn-explore-btn:hover { background: rgba(255,255,255,0.15); color: white; }
+
+/* ---- Admin dashboard ---- */
+.gn-admin { max-width: 900px; margin: 0 auto; padding: 80px 20px 40px; }
+.gn-admin h1 { margin-bottom: 24px; }
+.gn-stats-grid {
+  display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+  gap: 16px; margin-bottom: 32px;
+}
+.gn-stat-card {
+  background: var(--gn-white); border: 1px solid var(--gn-border);
+  border-radius: var(--gn-radius); padding: 20px; text-align: center;
+}
+.gn-stat-value { font-size: 2rem; font-weight: bold; color: var(--gn-primary); }
+.gn-stat-label { font-size: 0.85rem; color: var(--gn-text-muted); margin-top: 4px; }
+.gn-table {
+  width: 100%; border-collapse: collapse; margin-top: 16px;
+  background: var(--gn-white); border-radius: var(--gn-radius); overflow: hidden;
+  border: 1px solid var(--gn-border);
+}
+.gn-table th, .gn-table td { padding: 12px 16px; text-align: left; font-size: 0.9rem; }
+.gn-table th { background: var(--gn-bg); font-weight: 600; color: var(--gn-text-light); }
+.gn-table td { border-top: 1px solid var(--gn-border); }
+.gn-section { margin-bottom: 32px; }
+.gn-section h2 { margin-bottom: 12px; font-size: 1.1rem; }
+.gn-feedback-form { display: flex; gap: 8px; margin-top: 12px; }
+.gn-feedback-form textarea {
+  flex: 1; padding: 10px; border: 1px solid var(--gn-border);
+  border-radius: var(--gn-radius); font-family: inherit; font-size: 0.9rem;
+  resize: vertical; min-height: 60px;
+}
+.gn-feedback-form button {
+  background: var(--gn-primary); color: white; border: none;
+  border-radius: var(--gn-radius); padding: 10px 20px; cursor: pointer;
+  font-size: 0.9rem; align-self: flex-end;
+}
+.gn-nav {
+  display: flex; gap: 16px; margin-bottom: 24px; flex-wrap: wrap;
+}
+.gn-nav a {
+  padding: 8px 16px; border-radius: 20px; text-decoration: none;
+  font-size: 0.9rem; background: var(--gn-bg); color: var(--gn-text-light);
+  transition: background 0.2s;
+}
+.gn-nav a:hover, .gn-nav a.active { background: var(--gn-primary); color: white; }
+
+/* ---- Responsive ---- */
+@media (max-width: 600px) {
+  .gn-topbar { padding: 8px 12px; }
+  .gn-topbar-search { max-width: 160px; padding: 6px 12px; font-size: 0.8rem; }
+  .geonote-landing h1 { font-size: 2rem; }
+  .geonote-landing h2 { font-size: 1rem; }
+  .geonote-beta-form { flex-direction: column; }
+  .geonote-features { grid-template-columns: 1fr; }
+  .geonote-comments-panel { max-height: 80vh; }
+  .geonote-filters { bottom: 90px; left: 8px; min-width: 160px; padding: 12px; }
+  .geonote-fab { width: 52px; height: 52px; font-size: 1.5rem; bottom: 16px; right: 16px; }
+  .gn-locate-btn { bottom: 16px; left: 8px; width: 42px; height: 42px; }
+  .gn-msg-count { top: 48px; font-size: 0.8rem; padding: 4px 12px; }
+  .gn-stats-grid { grid-template-columns: repeat(2, 1fr); }
+  .gn-table { font-size: 0.8rem; }
+  .gn-table th, .gn-table td { padding: 8px 10px; }
+}

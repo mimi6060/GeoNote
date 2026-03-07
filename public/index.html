@@ -1,0 +1,94 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>GeoNote - Carte</title>
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+  <link rel="stylesheet" href="https://unpkg.com/leaflet.markercluster@1.5.3/dist/MarkerCluster.css" />
+  <link rel="stylesheet" href="https://unpkg.com/leaflet.markercluster@1.5.3/dist/MarkerCluster.Default.css" />
+  <link rel="stylesheet" href="/styles.css" />
+</head>
+<body>
+
+  <!-- TOP BAR -->
+  <header class="gn-topbar">
+    <a href="/" class="gn-topbar-logo">GeoNote</a>
+    <input id="search-hashtag" type="text" placeholder="Rechercher #hashtag..." class="gn-topbar-search" />
+    <a href="/profile" class="gn-topbar-link">Profil</a>
+  </header>
+
+  <!-- Message count badge -->
+  <div class="gn-msg-count" id="msg-count-badge" style="display:none;"></div>
+
+  <!-- CARTE -->
+  <div id="map-container" style="width:100vw;height:100vh;"></div>
+
+  <!-- FILTRES -->
+  <div class="geonote-filters">
+    <label for="filter-distance">Distance : <span id="radius-display">10km</span></label>
+    <input type="range" id="filter-distance" min="500" max="50000" step="500" value="10000" oninput="updateRadius(this.value)" />
+    <select id="filter-sort" onchange="loadNearbyMessages()">
+      <option value="distance">Proximite</option>
+      <option value="recent">Plus recents</option>
+      <option value="popular">Populaires</option>
+    </select>
+  </div>
+
+  <!-- BOUTON LOCALISATION -->
+  <button class="gn-locate-btn" onclick="locateUser()" title="Ma position">&#8982;</button>
+
+  <!-- FAB AJOUTER MESSAGE -->
+  <button class="geonote-fab" onclick="openCreateMessage()" title="Laisser un message">+</button>
+
+  <!-- MODAL CREATION MESSAGE -->
+  <div id="create-message-modal" class="geonote-modal-overlay">
+    <div class="geonote-modal">
+      <h2>Laisser une note ici</h2>
+      <form onsubmit="submitMessage(event)">
+        <textarea name="content" placeholder="Votre message... (utilisez #hashtags)" maxlength="500" required></textarea>
+        <div class="geonote-char-count"><span id="char-count">0</span>/500</div>
+        <div style="margin-top:12px;">
+          <label style="font-size:0.9rem;color:#666;">Visibilite</label>
+          <div style="display:flex;gap:12px;margin-top:8px;">
+            <label><input type="radio" name="visibility" value="public" checked /> Public</label>
+            <label><input type="radio" name="visibility" value="friends" /> Amis</label>
+            <label><input type="radio" name="visibility" value="private" /> Prive</label>
+          </div>
+        </div>
+        <input type="hidden" id="msg-lat" name="latitude" />
+        <input type="hidden" id="msg-lng" name="longitude" />
+        <div style="display:flex;gap:8px;margin-top:16px;">
+          <button type="button" onclick="closeCreateMessage()" style="flex:1;padding:14px;border:1px solid #e0e0e0;border-radius:8px;background:#fff;cursor:pointer;font-size:1rem;">Annuler</button>
+          <button type="submit" style="flex:2;padding:14px;border:none;border-radius:8px;background:#FF6B35;color:#fff;cursor:pointer;font-size:1rem;font-weight:bold;">Publier</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- SCRIPTS -->
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+  <script src="https://unpkg.com/leaflet.markercluster@1.5.3/dist/leaflet.markercluster.js"></script>
+  <script src="/map.js"></script>
+  <script>
+    // Char count
+    var textarea = document.querySelector('textarea[name="content"]');
+    var charCount = document.getElementById('char-count');
+    if (textarea && charCount) {
+      textarea.addEventListener('input', function () {
+        charCount.textContent = textarea.value.length;
+      });
+    }
+    // Hashtag search
+    var searchInput = document.getElementById('search-hashtag');
+    if (searchInput) {
+      var searchTimer;
+      searchInput.addEventListener('input', function () {
+        clearTimeout(searchTimer);
+        searchTimer = setTimeout(loadNearbyMessages, 300);
+      });
+    }
+  </script>
+
+</body>
+</html>

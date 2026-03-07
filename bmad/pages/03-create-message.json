@@ -1,0 +1,117 @@
+{
+  "page": {
+    "name": "Laisser un Message",
+    "route": "/map",
+    "type": "modal",
+    "description": "Modal de creation de message geolocalise",
+    "auth_required": true,
+    "components": [
+      {
+        "id": "create-message-modal",
+        "type": "modal",
+        "title": "Laisser une note ici",
+        "max_width": "480px",
+        "close_action": "workflow:close_create_message",
+        "children": [
+          {
+            "id": "location-preview",
+            "type": "mini-map",
+            "height": "150px",
+            "center": "current_position",
+            "zoom": 16,
+            "marker": true,
+            "interactive": false,
+            "style": { "border_radius": "8px", "margin_bottom": "16px" }
+          },
+          {
+            "id": "location-info",
+            "type": "row",
+            "style": { "margin_bottom": "16px", "color": "#666", "font_size": "0.85rem" },
+            "children": [
+              { "type": "icon", "name": "map-pin", "size": 14 },
+              { "type": "text", "text": "{current_address}", "fallback": "{latitude}, {longitude}" }
+            ]
+          },
+          {
+            "id": "message-form",
+            "type": "form",
+            "action": "workflow:create_message",
+            "fields": [
+              {
+                "name": "content",
+                "type": "textarea",
+                "placeholder": "Votre message... (utilisez #hashtags)",
+                "required": true,
+                "max_length": 500,
+                "rows": 4,
+                "show_char_count": true,
+                "validation": {
+                  "min_length": 1,
+                  "max_length": 500,
+                  "error_message": "Le message doit contenir entre 1 et 500 caracteres"
+                },
+                "style": { "border_radius": "8px", "padding": "12px", "font_size": "1rem" }
+              },
+              {
+                "name": "visibility",
+                "type": "radio-group",
+                "label": "Visibilite",
+                "options": [
+                  { "value": "public", "label": "Public", "icon": "globe", "description": "Visible par tous" },
+                  { "value": "friends", "label": "Amis", "icon": "users", "description": "Amis uniquement" },
+                  { "value": "private", "label": "Prive", "icon": "lock", "description": "Vous uniquement" }
+                ],
+                "default": "public",
+                "style": { "margin_top": "12px" }
+              },
+              {
+                "name": "is_anonymous",
+                "type": "toggle",
+                "label": "Publier anonymement",
+                "default": false,
+                "style": { "margin_top": "12px" }
+              },
+              {
+                "name": "latitude",
+                "type": "hidden",
+                "value": "auto:geolocation.latitude"
+              },
+              {
+                "name": "longitude",
+                "type": "hidden",
+                "value": "auto:geolocation.longitude"
+              }
+            ],
+            "submit": {
+              "text": "Publier",
+              "icon": "send",
+              "style": {
+                "width": "100%",
+                "background": "#FF6B35",
+                "color": "white",
+                "padding": "14px",
+                "border_radius": "8px",
+                "font_size": "1rem",
+                "font_weight": "bold",
+                "margin_top": "16px"
+              },
+              "loading_text": "Publication..."
+            },
+            "on_success": {
+              "actions": [
+                "notification:success:Message publie !",
+                "workflow:close_create_message",
+                "workflow:refresh_markers"
+              ]
+            },
+            "on_error": {
+              "actions": [
+                "notification:error:Erreur lors de la publication"
+              ]
+            }
+          }
+        ]
+      }
+    ]
+  }
+}

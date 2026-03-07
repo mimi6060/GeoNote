@@ -1,0 +1,96 @@
+{
+  "workflow": {
+    "name": "get_nearby_messages",
+    "description": "Recuperer les messages proches de la position utilisateur",
+    "trigger": "page_load:map OR event:update_radius OR event:map_move",
+    "auth_required": false,
+    "inputs": {
+      "latitude": { "type": "float", "source": "geolocation.latitude OR map.center.lat" },
+      "longitude": { "type": "float", "source": "geolocation.longitude OR map.center.lng" },
+      "radius": { "type": "integer", "default": 500, "source": "filters.distance" },
+      "sort": { "type": "string", "default": "distance", "source": "filters.sort" },
+      "hashtag": { "type": "string", "default": null, "source": "filters.hashtag" }
+    },
+    "steps": [
+      {
+        "id": "get_position",
+        "type": "geolocation",
+        "action": "get_current_position",
+        "fallback": {
+          "latitude": 48.8566,
+          "longitude": 2.3522,
+          "message": "Position par defaut : Paris"
+        }
+      },
+      {
+        "id": "query_messages",
+        "type": "database_query",
+        "mode": "function_call",
+        "function": "get_nearby_messages",
+        "params": {
+          "user_lat": "{{latitude}}",
+          "user_lng": "{{longitude}}",
+          "radius_meters": "{{radius}}",
+          "msg_limit": 50
+        }
+      },
+      {
+        "id": "filter_hashtag",
+        "type": "condition",
+        "if": "{{hashtag}} != null AND {{hashtag}} != ''",
+        "then": {
+          "type": "filter",
+          "input": "{{query_messages.results}}",
+          "condition": "item.hashtags CONTAINS {{hashtag}}"
+        },
+        "else": {
+          "type": "passthrough",
+          "data": "{{query_messages.results}}"
+        }
+      },
+      {
+        "id": "apply_sort",
+        "type": "sort",
+        "input": "{{filter_hashtag.output}}",
+        "rules": {
+          "distance": { "field": "distance_meters", "order": "asc" },
+          "recent": { "field": "created_at", "order": "desc" },
+          "popular": { "field": "likes_count", "order": "desc" }
+        },
+        "active_rule": "{{sort}}"
+      },
+      {
+        "id": "format_response",
+        "type": "transform",
+        "action": "map",
+        "input": "{{apply_sort.output}}",
+        "template": {
+          "id": "{{item.id}}",
+          "username": "{{item.username}}",
+          "content": "{{item.content}}",
+          "latitude": "{{item.latitude}}",
+          "longitude": "{{item.longitude}}",
+          "hashtags": "{{item.hashtags}}",
+          "likes_count": "{{item.likes_count}}",
+          "comments_count": "{{item.comments_count}}",
+          "created_at": "{{item.created_at}}",
+          "distance_meters": "{{item.distance_meters}}"
+        }
+      },
+      {
+        "id": "response",
+        "type": "response",
+        "status": 200,
+        "data": {
+          "messages": "{{format_response.output}}",
+          "count": "{{format_response.output.length}}",
+          "center": {
+            "latitude": "{{latitude}}",
+            "longitude": "{{longitude}}"
+          },
+          "radius": "{{radius}}"
+        }
+      }
+    ]
+  }
+}

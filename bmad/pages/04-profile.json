@@ -1,0 +1,161 @@
+{
+  "page": {
+    "name": "Profil Utilisateur",
+    "route": "/profile",
+    "description": "Page profil avec liste des messages publies",
+    "layout": "single-column",
+    "auth_required": true,
+    "components": [
+      {
+        "id": "profile-header",
+        "type": "section",
+        "style": {
+          "background": "gradient-primary",
+          "padding": "40px 20px",
+          "text_align": "center",
+          "color": "white"
+        },
+        "children": [
+          {
+            "id": "avatar",
+            "type": "avatar",
+            "size": 80,
+            "source": "current_user.avatar_url",
+            "fallback": "current_user.username[0]",
+            "style": { "margin_bottom": "12px" }
+          },
+          {
+            "id": "username",
+            "type": "heading",
+            "level": 2,
+            "text": "@{current_user.username}"
+          },
+          {
+            "id": "stats-row",
+            "type": "row",
+            "justify": "center",
+            "gap": "32px",
+            "style": { "margin_top": "16px" },
+            "children": [
+              {
+                "type": "stat",
+                "value": "{user_messages_count}",
+                "label": "Messages"
+              },
+              {
+                "type": "stat",
+                "value": "{user_total_likes}",
+                "label": "Likes recus"
+              }
+            ]
+          }
+        ]
+      },
+      {
+        "id": "messages-section",
+        "type": "section",
+        "style": { "padding": "20px", "max_width": "600px", "margin": "0 auto" },
+        "children": [
+          {
+            "id": "section-title",
+            "type": "heading",
+            "level": 3,
+            "text": "Mes messages"
+          },
+          {
+            "id": "messages-list",
+            "type": "list",
+            "data_source": "workflow:get_user_messages",
+            "empty_state": {
+              "icon": "message-circle",
+              "text": "Vous n'avez pas encore laisse de message",
+              "action": {
+                "text": "Laisser un message",
+                "action": "navigate:/map"
+              }
+            },
+            "item_template": {
+              "type": "card",
+              "style": { "padding": "16px", "margin_bottom": "12px", "border_radius": "8px" },
+              "children": [
+                {
+                  "type": "row",
+                  "justify": "space-between",
+                  "children": [
+                    {
+                      "type": "row",
+                      "gap": "8px",
+                      "children": [
+                        { "type": "icon", "name": "map-pin", "size": 14, "color": "#FF6B35" },
+                        { "type": "text", "field": "address_short", "style": { "color": "#666", "font_size": "0.85rem" } }
+                      ]
+                    },
+                    {
+                      "type": "badge",
+                      "field": "visibility",
+                      "color_map": {
+                        "public": "green",
+                        "friends": "blue",
+                        "private": "gray"
+                      }
+                    }
+                  ]
+                },
+                {
+                  "type": "text",
+                  "field": "content",
+                  "style": { "margin": "8px 0" }
+                },
+                {
+                  "type": "row",
+                  "justify": "space-between",
+                  "children": [
+                    {
+                      "type": "row",
+                      "gap": "16px",
+                      "children": [
+                        { "type": "text", "text": "{likes_count} likes", "style": { "color": "#999", "font_size": "0.85rem" } },
+                        { "type": "text", "text": "{comments_count} commentaires", "style": { "color": "#999", "font_size": "0.85rem" } }
+                      ]
+                    },
+                    {
+                      "type": "button",
+                      "icon": "trash-2",
+                      "variant": "ghost",
+                      "color": "red",
+                      "action": "workflow:delete_message",
+                      "confirm": "Supprimer ce message ?"
+                    }
+                  ]
+                },
+                {
+                  "type": "text",
+                  "field": "created_at",
+                  "format": "relative_time",
+                  "style": { "color": "#bbb", "font_size": "0.8rem", "margin_top": "4px" }
+                }
+              ]
+            }
+          }
+        ]
+      },
+      {
+        "id": "back-to-map",
+        "type": "button",
+        "text": "Retour a la carte",
+        "icon": "map",
+        "action": "navigate:/map",
+        "style": {
+          "position": "fixed",
+          "bottom": "24px",
+          "right": "24px",
+          "background": "#FF6B35",
+          "color": "white",
+          "padding": "12px 24px",
+          "border_radius": "24px",
+          "box_shadow": "0 4px 12px rgba(255,107,53,0.3)"
+        }
+      }
+    ]
+  }
+}

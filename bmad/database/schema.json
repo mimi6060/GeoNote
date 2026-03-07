@@ -1,0 +1,240 @@
+{
+  "project": "GeoNote",
+  "version": "1.0.0-mvp",
+  "database": {
+    "tables": [
+      {
+        "name": "users",
+        "description": "Utilisateurs de l'application",
+        "fields": [
+          {
+            "name": "id",
+            "type": "uuid",
+            "primary_key": true,
+            "auto_generate": true
+          },
+          {
+            "name": "username",
+            "type": "string",
+            "max_length": 30,
+            "unique": true,
+            "required": true,
+            "validation": "^[a-zA-Z0-9_]{3,30}$"
+          },
+          {
+            "name": "email",
+            "type": "string",
+            "max_length": 255,
+            "unique": true,
+            "required": true,
+            "validation": "email"
+          },
+          {
+            "name": "avatar_url",
+            "type": "string",
+            "required": false,
+            "default": null
+          },
+          {
+            "name": "is_anonymous",
+            "type": "boolean",
+            "default": false
+          },
+          {
+            "name": "created_at",
+            "type": "timestamp",
+            "auto_generate": true,
+            "default": "now()"
+          }
+        ],
+        "indexes": [
+          { "fields": ["username"], "unique": true },
+          { "fields": ["email"], "unique": true }
+        ]
+      },
+      {
+        "name": "messages",
+        "description": "Messages geolocalises laisses par les utilisateurs",
+        "fields": [
+          {
+            "name": "id",
+            "type": "uuid",
+            "primary_key": true,
+            "auto_generate": true
+          },
+          {
+            "name": "user_id",
+            "type": "uuid",
+            "required": true,
+            "foreign_key": {
+              "table": "users",
+              "field": "id",
+              "on_delete": "cascade"
+            }
+          },
+          {
+            "name": "content",
+            "type": "text",
+            "max_length": 500,
+            "required": true
+          },
+          {
+            "name": "latitude",
+            "type": "float",
+            "required": true,
+            "validation": {
+              "min": -90,
+              "max": 90
+            }
+          },
+          {
+            "name": "longitude",
+            "type": "float",
+            "required": true,
+            "validation": {
+              "min": -180,
+              "max": 180
+            }
+          },
+          {
+            "name": "visibility",
+            "type": "string",
+            "enum": ["public", "friends", "private"],
+            "default": "public",
+            "required": true
+          },
+          {
+            "name": "hashtags",
+            "type": "string[]",
+            "default": [],
+            "description": "Extraits automatiquement du contenu"
+          },
+          {
+            "name": "likes_count",
+            "type": "integer",
+            "default": 0
+          },
+          {
+            "name": "comments_count",
+            "type": "integer",
+            "default": 0
+          },
+          {
+            "name": "created_at",
+            "type": "timestamp",
+            "auto_generate": true,
+            "default": "now()"
+          }
+        ],
+        "indexes": [
+          { "fields": ["user_id"] },
+          { "fields": ["latitude", "longitude"] },
+          { "fields": ["visibility"] },
+          { "fields": ["created_at"] }
+        ]
+      },
+      {
+        "name": "interactions",
+        "description": "Likes et commentaires sur les messages",
+        "fields": [
+          {
+            "name": "id",
+            "type": "uuid",
+            "primary_key": true,
+            "auto_generate": true
+          },
+          {
+            "name": "message_id",
+            "type": "uuid",
+            "required": true,
+            "foreign_key": {
+              "table": "messages",
+              "field": "id",
+              "on_delete": "cascade"
+            }
+          },
+          {
+            "name": "user_id",
+            "type": "uuid",
+            "required": true,
+            "foreign_key": {
+              "table": "users",
+              "field": "id",
+              "on_delete": "cascade"
+            }
+          },
+          {
+            "name": "type",
+            "type": "string",
+            "enum": ["like", "comment"],
+            "required": true
+          },
+          {
+            "name": "content",
+            "type": "text",
+            "max_length": 300,
+            "required": false,
+            "description": "Requis uniquement pour type=comment"
+          },
+          {
+            "name": "created_at",
+            "type": "timestamp",
+            "auto_generate": true,
+            "default": "now()"
+          }
+        ],
+        "indexes": [
+          { "fields": ["message_id"] },
+          { "fields": ["user_id"] },
+          { "fields": ["message_id", "user_id", "type"], "unique": true, "description": "Un seul like par user par message" }
+        ]
+      },
+      {
+        "name": "beta_signups",
+        "description": "Collecte des emails pour la beta",
+        "fields": [
+          {
+            "name": "id",
+            "type": "uuid",
+            "primary_key": true,
+            "auto_generate": true
+          },
+          {
+            "name": "email",
+            "type": "string",
+            "max_length": 255,
+            "unique": true,
+            "required": true,
+            "validation": "email"
+          },
+          {
+            "name": "created_at",
+            "type": "timestamp",
+            "auto_generate": true,
+            "default": "now()"
+          }
+        ]
+      }
+    ],
+    "relations": [
+      {
+        "from": "messages.user_id",
+        "to": "users.id",
+        "type": "many-to-one",
+        "description": "Un utilisateur peut avoir plusieurs messages"
+      },
+      {
+        "from": "interactions.message_id",
+        "to": "messages.id",
+        "type": "many-to-one",
+        "description": "Un message peut avoir plusieurs interactions"
+      },
+      {
+        "from": "interactions.user_id",
+        "to": "users.id",
+        "type": "many-to-one",
+        "description": "Un utilisateur peut avoir plusieurs interactions"
+      }
+    ]
+  }
+}

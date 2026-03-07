@@ -1,0 +1,99 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>GeoNote - Laissez des messages partout</title>
+  <link rel="stylesheet" href="/styles.css" />
+</head>
+<body>
+
+  <div class="geonote-landing">
+    <h1>GeoNote</h1>
+    <h2>Laissez des messages. Partout. Pour tout le monde.</h2>
+    <p>
+      GeoNote transforme le monde en un reseau social geolocalise.
+      Laissez des notes, des bons plans ou des souvenirs attaches a un lieu.
+      Decouvrez ce que les autres ont partage autour de vous.
+    </p>
+
+    <div class="geonote-features">
+      <div class="geonote-feature-card">
+        <div style="font-size:2.5rem;">&#128205;</div>
+        <h3>Geolocalise</h3>
+        <p style="margin-top:8px;font-size:0.9rem;opacity:0.85;">Chaque message est attache a un lieu precis</p>
+      </div>
+      <div class="geonote-feature-card">
+        <div style="font-size:2.5rem;">&#128172;</div>
+        <h3>Social</h3>
+        <p style="margin-top:8px;font-size:0.9rem;opacity:0.85;">Likez et commentez les notes autour de vous</p>
+      </div>
+      <div class="geonote-feature-card">
+        <div style="font-size:2.5rem;">&#127758;</div>
+        <h3>Decouverte</h3>
+        <p style="margin-top:8px;font-size:0.9rem;opacity:0.85;">Explorez les messages caches dans votre quartier</p>
+      </div>
+    </div>
+
+    <!-- Live stats -->
+    <p id="live-stats" style="margin-top:24px;font-size:0.95rem;opacity:0.8;"></p>
+
+    <form class="geonote-beta-form" id="beta-form" onsubmit="betaSignup(event)">
+      <input type="email" id="beta-email" placeholder="votre@email.com" required />
+      <button type="submit">Rejoindre la beta</button>
+    </form>
+    <p id="beta-msg" style="margin-top:12px;font-size:0.9rem;min-height:1.2em;"></p>
+
+    <a href="/map" class="gn-explore-btn">Explorer la carte</a>
+
+    <div style="margin-top:48px;opacity:0.5;font-size:0.8rem;">
+      <a href="/admin" style="color:white;">Admin</a>
+    </div>
+  </div>
+
+  <script>
+    async function betaSignup(event) {
+      event.preventDefault();
+      var email = document.getElementById('beta-email').value.trim();
+      var msg = document.getElementById('beta-msg');
+      var btn = event.target.querySelector('button');
+      if (!email) return;
+
+      btn.disabled = true;
+      btn.textContent = 'Envoi...';
+
+      try {
+        var response = await fetch('/api/beta-signup', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ email: email }),
+        });
+        var data = await response.json();
+
+        if (response.ok) {
+          msg.textContent = 'Merci ! Vous serez informe(e) du lancement.';
+          msg.style.color = '#90EE90';
+          document.getElementById('beta-email').value = '';
+        } else {
+          msg.textContent = data.error || 'Erreur';
+          msg.style.color = '#FFB3B3';
+        }
+      } catch (err) {
+        msg.textContent = 'Erreur de connexion';
+        msg.style.color = '#FFB3B3';
+      }
+      btn.disabled = false;
+      btn.textContent = 'Rejoindre la beta';
+    }
+
+    // Live stats
+    fetch('/api/stats').then(function(r) { return r.json(); }).then(function(d) {
+      var el = document.getElementById('live-stats');
+      if (el) {
+        el.textContent = d.messages + ' messages postes par ' + d.users + ' utilisateurs';
+      }
+    }).catch(function() {});
+  </script>
+
+</body>
+</html>
