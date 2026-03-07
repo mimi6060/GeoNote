@@ -50,4 +50,8 @@ class MessagesProvider extends ChangeNotifier {
   Future<void> toggleLike(String messageId) async {
     await _api.toggleLike(messageId);
   }
+
+  Future<Map<String, dynamic>> toggleLikeAndReturn(String messageId) async {
+    return await _api.toggleLikeRaw(messageId);
+  }
 }

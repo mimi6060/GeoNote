@@ -140,6 +140,11 @@ class ApiService {
   // ---- Interactions ----
 
   Future<bool> toggleLike(String messageId) async {
+    final data = await toggleLikeRaw(messageId);
+    return data['liked'] as bool;
+  }
+
+  Future<Map<String, dynamic>> toggleLikeRaw(String messageId) async {
     final response = await http.post(
       Uri.parse('${ApiConfig.baseUrl}/messages/$messageId/like'),
       headers: _headers,
@@ -147,7 +152,28 @@ class ApiService {
     _checkError(response);
 
     final body = jsonDecode(response.body) as Map<String, dynamic>;
-    return body['data']['liked'] as bool;
+    return body['data'] as Map<String, dynamic>;
+  }
+
+  Future<List<Map<String, dynamic>>> getComments(String messageId) async {
+    final response = await http.get(
+      Uri.parse('${ApiConfig.baseUrl}/messages/$messageId/comments'),
+      headers: _headers,
+    );
+    _checkError(response);
+
+    final body = jsonDecode(response.body) as Map<String, dynamic>;
+    final list = body['data']['comments'] as List<dynamic>;
+    return list.cast<Map<String, dynamic>>();
+  }
+
+  Future<void> addComment(String messageId, String content) async {
+    final response = await http.post(
+      Uri.parse('${ApiConfig.baseUrl}/messages/$messageId/comments'),
+      headers: _headers,
+      body: jsonEncode({'content': content}),
+    );
+    _checkError(response);
   }
 
   void _checkError(http.Response response) {

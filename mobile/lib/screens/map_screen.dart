@@ -133,6 +133,11 @@ class _MapScreenState extends State<MapScreen> {
             options: MapOptions(
               initialCenter: _center,
               initialZoom: 13,
+              minZoom: 3,
+              maxZoom: 18,
+              interactionOptions: const InteractionOptions(
+                flags: InteractiveFlag.all,
+              ),
               onPositionChanged: (pos, _) {
                 _center = pos.center ?? _center;
               },

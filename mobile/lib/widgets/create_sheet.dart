@@ -20,6 +20,16 @@ class _CreateSheetState extends State<CreateSheet> {
   final _controller = TextEditingController();
   String _visibility = 'public';
   bool _submitting = false;
+  bool _hasText = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _controller.addListener(() {
+      final has = _controller.text.trim().isNotEmpty;
+      if (has != _hasText) setState(() => _hasText = has);
+    });
+  }
 
   @override
   void dispose() {
@@ -121,7 +131,7 @@ class _CreateSheetState extends State<CreateSheet> {
               ),
             ),
             const SizedBox(height: 12),
-            // Visibility
+            // Visibility + submit
             Row(
               children: [
                 _VisibilityChip(
@@ -147,9 +157,7 @@ class _CreateSheetState extends State<CreateSheet> {
                 const Spacer(),
                 // Submit
                 FilledButton.icon(
-                  onPressed: _submitting || _controller.text.trim().isEmpty
-                      ? null
-                      : _submit,
+                  onPressed: _submitting || !_hasText ? null : _submit,
                   icon: _submitting
                       ? const SizedBox(
                           width: 16, height: 16,
@@ -187,10 +195,11 @@ class _VisibilityChip extends StatelessWidget {
   Widget build(BuildContext context) {
     return GestureDetector(
       onTap: onTap,
-      child: Container(
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 200),
         padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
         decoration: BoxDecoration(
-          color: selected ? GeoNoteTheme.primary.withOpacity(0.1) : Colors.grey[100],
+          color: selected ? GeoNoteTheme.primary.withOpacity(0.12) : Colors.grey[100],
           borderRadius: BorderRadius.circular(16),
           border: Border.all(
             color: selected ? GeoNoteTheme.primary : Colors.transparent,
