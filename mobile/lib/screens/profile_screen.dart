@@ -192,9 +192,18 @@ class _ProfileScreenState extends State<ProfileScreen> {
                               child: Column(
                                 crossAxisAlignment: CrossAxisAlignment.start,
                                 children: [
-                                  Text(
-                                    '${streak['current_streak'] ?? 0} jour${(streak['current_streak'] ?? 0) != 1 ? 's' : ''} de streak',
-                                    style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 15),
+                                  Row(
+                                    children: [
+                                      Text(
+                                        '${streak['current_streak'] ?? 0} jour${(streak['current_streak'] ?? 0) != 1 ? 's' : ''} de streak',
+                                        style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 15),
+                                      ),
+                                      const SizedBox(width: 6),
+                                      Tooltip(
+                                        message: 'Postez chaque jour pour maintenir votre streak !',
+                                        child: Icon(Icons.info_outline, size: 14, color: Colors.grey[400]),
+                                      ),
+                                    ],
                                   ),
                                   const SizedBox(height: 2),
                                   Text(

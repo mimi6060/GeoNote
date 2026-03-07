@@ -39,6 +39,20 @@ class _LeaderboardScreenState extends State<LeaderboardScreen> {
       appBar: AppBar(
         title: const Text('Leaderboard', style: TextStyle(fontWeight: FontWeight.bold)),
         actions: [
+          Tooltip(
+            message: 'Classement base sur les 30 derniers jours autour de vous',
+            child: IconButton(
+              icon: const Icon(Icons.info_outline, size: 20),
+              onPressed: () {
+                ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(
+                    content: Text('Score = messages x10 + likes x5. Base sur 30 jours dans un rayon de 5km.'),
+                    duration: Duration(seconds: 4),
+                  ),
+                );
+              },
+            ),
+          ),
           IconButton(
             icon: const Icon(Icons.refresh),
             onPressed: _load,

@@ -485,16 +485,22 @@ class _MapScreenState extends State<MapScreen> {
                 ),
                 const Spacer(),
                 // Heatmap toggle
-                _MapButton(
-                  icon: Icons.thermostat,
-                  onTap: _toggleHeatmap,
-                  active: _showHeatmap,
+                Tooltip(
+                  message: 'Carte de chaleur : voir les zones actives',
+                  child: _MapButton(
+                    icon: Icons.thermostat,
+                    onTap: _toggleHeatmap,
+                    active: _showHeatmap,
+                  ),
                 ),
                 const SizedBox(width: 8),
                 // GPS button
-                _MapButton(
-                  icon: Icons.my_location,
-                  onTap: _initLocation,
+                Tooltip(
+                  message: 'Recentrer sur ma position',
+                  child: _MapButton(
+                    icon: Icons.my_location,
+                    onTap: _initLocation,
+                  ),
                 ),
               ],
             ),

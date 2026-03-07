@@ -168,6 +168,52 @@ class _CreateSheetState extends State<CreateSheet> {
                 ),
               ],
             ),
+            // Info bubble explaining the selected type
+            const SizedBox(height: 8),
+            AnimatedSwitcher(
+              duration: const Duration(milliseconds: 200),
+              child: Container(
+                key: ValueKey(_messageType),
+                width: double.infinity,
+                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                decoration: BoxDecoration(
+                  color: _messageType == 'mystery'
+                      ? Colors.deepPurple.withOpacity(0.06)
+                      : _messageType == 'capsule'
+                          ? Colors.purple.withOpacity(0.06)
+                          : GeoNoteTheme.primary.withOpacity(0.06),
+                  borderRadius: BorderRadius.circular(10),
+                ),
+                child: Row(
+                  children: [
+                    Icon(
+                      Icons.info_outline,
+                      size: 14,
+                      color: _messageType == 'mystery'
+                          ? Colors.deepPurple
+                          : _messageType == 'capsule'
+                              ? Colors.purple
+                              : GeoNoteTheme.primary,
+                    ),
+                    const SizedBox(width: 8),
+                    Expanded(
+                      child: Text(
+                        _messageType == 'mystery'
+                            ? 'Les autres doivent se deplacer sur place pour lire votre message. Ideal pour des secrets ou des chasses au tresor !'
+                            : _messageType == 'capsule'
+                                ? 'Votre message restera cache et apparaitra a la date choisie. Parfait pour des surprises ou des souvenirs !'
+                                : 'Visible par tous pendant 24h puis disparait. Partagez ce qui se passe ici et maintenant !',
+                        style: TextStyle(
+                          fontSize: 11,
+                          color: Colors.grey[600],
+                          height: 1.3,
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
             // Capsule date display
             if (_messageType == 'capsule') ...[
               const SizedBox(height: 8),
