@@ -19,7 +19,16 @@ class AuthProvider extends ChangeNotifier {
     _token = prefs.getString('token');
     if (_token != null) {
       _api.setToken(_token);
+      try {
+        _user = await _api.getMe();
+      } catch (_) {
+        // Token expired or invalid — clear session
+        _token = null;
+        _api.setToken(null);
+        await prefs.remove('token');
+      }
     }
+    notifyListeners();
   }
 
   Future<void> register({

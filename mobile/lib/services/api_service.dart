@@ -62,6 +62,17 @@ class ApiService {
     );
   }
 
+  Future<User> getMe() async {
+    final response = await http.get(
+      Uri.parse('${ApiConfig.baseUrl}/auth/me'),
+      headers: _headers,
+    );
+    _checkError(response);
+
+    final body = jsonDecode(response.body) as Map<String, dynamic>;
+    return User.fromJson(body['data'] as Map<String, dynamic>);
+  }
+
   // ---- Messages ----
 
   Future<List<Message>> getNearbyMessages({
