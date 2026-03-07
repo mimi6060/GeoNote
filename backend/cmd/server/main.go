@@ -49,16 +49,19 @@ func main() {
 	userRepo := repository.NewUserRepo(pool)
 	messageRepo := repository.NewMessageRepo(pool)
 	interactionRepo := repository.NewInteractionRepo(pool)
+	gamRepo := repository.NewGamificationRepo(pool)
 
 	// ---- Services ----
 	authSvc := service.NewAuthService(userRepo, cfg.JWTSecret, cfg.JWTExpiry)
-	messageSvc := service.NewMessageService(messageRepo, redisCache, hub)
+	messageSvc := service.NewMessageService(messageRepo, gamRepo, redisCache, hub)
 	interactionSvc := service.NewInteractionService(interactionRepo)
+	gamSvc := service.NewGamificationService(gamRepo)
 
 	// ---- Handlers ----
 	authH := handler.NewAuthHandler(authSvc)
 	messageH := handler.NewMessageHandler(messageSvc)
 	interactionH := handler.NewInteractionHandler(interactionSvc)
+	gamH := handler.NewGamificationHandler(gamSvc)
 
 	// ---- Router ----
 	r := chi.NewRouter()
@@ -87,28 +90,38 @@ func main() {
 		r.Post("/auth/register", authH.Register)
 		r.Post("/auth/login", authH.Login)
 
-		// Messages (lecture publique, auth optionnelle pour voir ses propres messages prives)
-		r.With(middleware.OptionalAuth(authSvc)).Get("/messages/nearby", messageH.GetNearby)
-		r.Get("/users/{id}/messages", messageH.GetByUser)
+		// Public routes with optional auth
+		r.Group(func(r chi.Router) {
+			r.Use(middleware.OptionalAuth(authSvc))
 
-		// Messages (ecriture authentifiee)
+			r.Get("/messages/nearby", messageH.GetNearby)
+			r.Get("/heatmap", messageH.GetHeatmap)
+			r.Get("/leaderboard", messageH.GetLeaderboard)
+		})
+		r.Get("/users/{id}/messages", messageH.GetByUser)
+		r.Get("/users/{id}/profile", gamH.GetUserProfile)
+
+		// Authenticated routes
 		r.Group(func(r chi.Router) {
 			r.Use(middleware.Auth(authSvc))
 
 			r.Get("/auth/me", authH.Me)
+			r.Get("/me/profile", gamH.GetMyProfile)
+
 			r.With(middleware.AntiSpam(30 * time.Second)).Post("/messages", messageH.Create)
 			r.Delete("/messages/{id}", messageH.Delete)
+			r.Post("/messages/{id}/unlock", messageH.UnlockMystery)
 
 			r.Post("/messages/{id}/like", interactionH.ToggleLike)
 			r.Post("/messages/{id}/comments", interactionH.AddComment)
 			r.Delete("/comments/{commentId}", interactionH.DeleteComment)
 		})
 
-		// Commentaires (lecture publique)
+		// Comments (public read)
 		r.Get("/messages/{id}/comments", interactionH.GetComments)
 	})
 
-	// WebSocket endpoint
+	// WebSocket
 	r.Get("/ws", func(w http.ResponseWriter, r *http.Request) {
 		ws.ServeWS(hub, w, r)
 	})
@@ -122,7 +135,6 @@ func main() {
 		IdleTimeout:  120 * time.Second,
 	}
 
-	// Graceful shutdown
 	go func() {
 		log.Printf("GeoNote API sur http://localhost:%s", cfg.Port)
 		log.Printf("WebSocket sur ws://localhost:%s/ws", cfg.Port)

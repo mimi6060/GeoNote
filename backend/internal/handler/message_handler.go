@@ -117,6 +117,82 @@ func (h *MessageHandler) GetByUser(w http.ResponseWriter, r *http.Request) {
 	})
 }
 
+// UnlockMystery handles POST /messages/{id}/unlock
+func (h *MessageHandler) UnlockMystery(w http.ResponseWriter, r *http.Request) {
+	messageID := chi.URLParam(r, "id")
+	userID := middleware.GetUserID(r.Context())
+
+	var body struct {
+		Latitude  float64 `json:"latitude"`
+		Longitude float64 `json:"longitude"`
+	}
+	if err := DecodeJSON(r, &body); err != nil {
+		WriteError(w, http.StatusBadRequest, "INVALID_JSON", "JSON invalide")
+		return
+	}
+
+	msg, unlocked, err := h.svc.UnlockMystery(r.Context(), messageID, userID, body.Latitude, body.Longitude)
+	if errors.Is(err, repository.ErrNotFound) {
+		WriteError(w, http.StatusNotFound, "NOT_FOUND", "Message introuvable")
+		return
+	}
+	if err != nil {
+		WriteError(w, http.StatusInternalServerError, "UNLOCK_ERROR", "Erreur serveur")
+		return
+	}
+
+	WriteJSON(w, http.StatusOK, map[string]interface{}{
+		"message":  msg,
+		"unlocked": unlocked,
+	})
+}
+
+// GetHeatmap handles GET /heatmap
+func (h *MessageHandler) GetHeatmap(w http.ResponseWriter, r *http.Request) {
+	lat := parseFloat(r, "lat", 48.8566)
+	lng := parseFloat(r, "lng", 2.3522)
+	radius := parseInt(r, "radius", 1000)
+	if radius > 5000 {
+		radius = 5000
+	}
+
+	points, err := h.svc.GetHeatmap(r.Context(), lat, lng, radius)
+	if err != nil {
+		WriteError(w, http.StatusInternalServerError, "HEATMAP_ERROR", "Erreur serveur")
+		return
+	}
+	if points == nil {
+		points = []model.HeatmapPoint{}
+	}
+
+	WriteJSON(w, http.StatusOK, map[string]interface{}{
+		"points": points,
+		"count":  len(points),
+	})
+}
+
+// GetLeaderboard handles GET /leaderboard
+func (h *MessageHandler) GetLeaderboard(w http.ResponseWriter, r *http.Request) {
+	lat := parseFloat(r, "lat", 48.8566)
+	lng := parseFloat(r, "lng", 2.3522)
+	radius := parseInt(r, "radius", 5000)
+	limit := parseInt(r, "limit", 20)
+
+	entries, err := h.svc.GetLeaderboard(r.Context(), lat, lng, radius, limit)
+	if err != nil {
+		WriteError(w, http.StatusInternalServerError, "LEADERBOARD_ERROR", "Erreur serveur")
+		return
+	}
+	if entries == nil {
+		entries = []model.LeaderboardEntry{}
+	}
+
+	WriteJSON(w, http.StatusOK, map[string]interface{}{
+		"leaderboard": entries,
+		"count":       len(entries),
+	})
+}
+
 func parseFloat(r *http.Request, key string, fallback float64) float64 {
 	v, err := strconv.ParseFloat(r.URL.Query().Get(key), 64)
 	if err != nil {

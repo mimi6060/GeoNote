@@ -14,13 +14,14 @@ import (
 )
 
 type MessageService struct {
-	repo  *repository.MessageRepo
-	cache *cache.RedisCache
-	hub   *ws.Hub
+	repo     *repository.MessageRepo
+	gamRepo  *repository.GamificationRepo
+	cache    *cache.RedisCache
+	hub      *ws.Hub
 }
 
-func NewMessageService(repo *repository.MessageRepo, c *cache.RedisCache, hub *ws.Hub) *MessageService {
-	return &MessageService{repo: repo, cache: c, hub: hub}
+func NewMessageService(repo *repository.MessageRepo, gamRepo *repository.GamificationRepo, c *cache.RedisCache, hub *ws.Hub) *MessageService {
+	return &MessageService{repo: repo, gamRepo: gamRepo, cache: c, hub: hub}
 }
 
 func (s *MessageService) Create(ctx context.Context, userID string, req model.CreateMessageRequest) (*model.Message, error) {
@@ -31,6 +32,15 @@ func (s *MessageService) Create(ctx context.Context, userID string, req model.Cr
 
 	s.cache.InvalidateZone(ctx)
 	s.hub.BroadcastNewMessage(msg)
+
+	// Update gamification: streak + badges
+	if s.gamRepo != nil {
+		s.gamRepo.RecordPost(ctx, userID, req.Latitude, req.Longitude)
+		s.gamRepo.CheckAndAwardBadges(ctx, userID)
+		if req.MessageType == "capsule" {
+			s.gamRepo.AwardBadge(ctx, userID, "capsule_creator")
+		}
+	}
 
 	return msg, nil
 }
@@ -43,7 +53,7 @@ func (s *MessageService) GetNearby(ctx context.Context, q model.NearbyQuery) ([]
 		q.Limit = 50
 	}
 
-	// Grid cache — only for default sort without hashtag filter
+	// Grid cache
 	if q.Hashtag == "" && (q.Sort == "" || q.Sort == "distance") {
 		key := cache.GridKey(q.Latitude, q.Longitude, q.Radius, q.UserID)
 		var cached []model.Message
@@ -58,7 +68,23 @@ func (s *MessageService) GetNearby(ctx context.Context, q model.NearbyQuery) ([]
 		return nil, err
 	}
 
-	// Ranking: score = distance_weight + likes_weight + recency_weight
+	// Hide mystery message content for users who haven't unlocked them
+	for i := range messages {
+		if messages[i].MessageType == "mystery" {
+			if q.UserID == "" || messages[i].UserID != q.UserID {
+				// Check if unlocked
+				if q.UserID != "" {
+					unlocked, _ := s.repo.IsUnlocked(ctx, messages[i].ID, q.UserID)
+					if unlocked {
+						continue
+					}
+				}
+				messages[i].Content = "???"
+			}
+		}
+	}
+
+	// Ranking
 	switch q.Sort {
 	case "recent":
 		sort.Slice(messages, func(i, j int) bool {
@@ -69,14 +95,13 @@ func (s *MessageService) GetNearby(ctx context.Context, q model.NearbyQuery) ([]
 			return messages[i].LikesCount > messages[j].LikesCount
 		})
 	default:
-		// Ranked sort: combines distance, likes, and recency
 		now := time.Now()
 		sort.Slice(messages, func(i, j int) bool {
 			return rankScore(&messages[i], now) > rankScore(&messages[j], now)
 		})
 	}
 
-	// Grid cache store
+	// Cache store
 	if q.Hashtag == "" && (q.Sort == "" || q.Sort == "distance") {
 		key := cache.GridKey(q.Latitude, q.Longitude, q.Radius, q.UserID)
 		if err := s.cache.Set(ctx, key, messages); err != nil {
@@ -87,23 +112,15 @@ func (s *MessageService) GetNearby(ctx context.Context, q model.NearbyQuery) ([]
 	return messages, nil
 }
 
-// rankScore computes a relevance score: closer + more liked + more recent = higher.
 func rankScore(m *model.Message, now time.Time) float64 {
 	dist := 1000.0
 	if m.Distance != nil && *m.Distance > 0 {
 		dist = *m.Distance
 	}
-
-	// Distance: closer = higher score (inverse, capped at 1000m)
 	distScore := 1.0 - math.Min(dist, 1000.0)/1000.0
-
-	// Likes: log scale to dampen outliers
 	likesScore := math.Log1p(float64(m.LikesCount)) / 5.0
-
-	// Recency: exponential decay, half-life = 6 hours
 	hours := now.Sub(m.CreatedAt).Hours()
-	recencyScore := math.Exp(-hours / 8.66) // ln(2)/8.66 ~ 6h half-life
-
+	recencyScore := math.Exp(-hours / 8.66)
 	return distScore*0.4 + likesScore*0.3 + recencyScore*0.3
 }
 
@@ -118,4 +135,67 @@ func (s *MessageService) Delete(ctx context.Context, id, userID string) error {
 
 func (s *MessageService) GetByUser(ctx context.Context, userID string) ([]model.Message, error) {
 	return s.repo.GetByUser(ctx, userID)
+}
+
+// UnlockMystery attempts to unlock a mystery message (user must be within mystery_radius).
+func (s *MessageService) UnlockMystery(ctx context.Context, messageID, userID string, userLat, userLng float64) (*model.Message, bool, error) {
+	// Get all nearby messages and find the target
+	messages, err := s.repo.GetNearby(ctx, model.NearbyQuery{
+		Latitude: userLat, Longitude: userLng, Radius: 1000, Limit: 100, UserID: userID,
+	})
+	if err != nil {
+		return nil, false, err
+	}
+
+	var target *model.Message
+	for i := range messages {
+		if messages[i].ID == messageID {
+			target = &messages[i]
+			break
+		}
+	}
+	if target == nil {
+		return nil, false, repository.ErrNotFound
+	}
+	if target.MessageType != "mystery" {
+		return target, false, nil
+	}
+
+	// Check distance
+	if target.Distance != nil && *target.Distance > float64(target.MysteryRadius) {
+		return target, false, nil
+	}
+
+	newlyUnlocked, err := s.repo.UnlockMystery(ctx, messageID, userID)
+	if err != nil {
+		return nil, false, err
+	}
+
+	if newlyUnlocked && s.gamRepo != nil {
+		s.gamRepo.RecordUnlock(ctx, userID)
+		s.gamRepo.CheckAndAwardBadges(ctx, userID)
+	}
+
+	// Return full content
+	target.Content = target.Content // content was hidden; re-fetch
+	return target, newlyUnlocked, nil
+}
+
+// GetHeatmap returns zone activity data.
+func (s *MessageService) GetHeatmap(ctx context.Context, lat, lng float64, radius int) ([]model.HeatmapPoint, error) {
+	if radius > 5000 {
+		radius = 5000
+	}
+	return s.repo.GetHeatmap(ctx, lat, lng, radius)
+}
+
+// GetLeaderboard returns local rankings.
+func (s *MessageService) GetLeaderboard(ctx context.Context, lat, lng float64, radius, limit int) ([]model.LeaderboardEntry, error) {
+	if radius > 10000 {
+		radius = 10000
+	}
+	if limit > 50 {
+		limit = 50
+	}
+	return s.repo.GetLeaderboard(ctx, lat, lng, radius, limit)
 }

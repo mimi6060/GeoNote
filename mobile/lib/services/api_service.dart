@@ -68,7 +68,6 @@ class ApiService {
       headers: _headers,
     );
     _checkError(response);
-
     final body = jsonDecode(response.body) as Map<String, dynamic>;
     return User.fromJson(body['data'] as Map<String, dynamic>);
   }
@@ -78,7 +77,7 @@ class ApiService {
   Future<List<Message>> getNearbyMessages({
     required double latitude,
     required double longitude,
-    int radius = 10000,
+    int radius = 1000,
     int limit = 50,
     String sort = 'distance',
     String? hashtag,
@@ -91,17 +90,13 @@ class ApiService {
       'sort': sort,
       if (hashtag != null && hashtag.isNotEmpty) 'hashtag': hashtag,
     };
-
     final uri = Uri.parse('${ApiConfig.baseUrl}/messages/nearby')
         .replace(queryParameters: params);
     final response = await http.get(uri, headers: _headers);
     _checkError(response);
-
     final body = jsonDecode(response.body) as Map<String, dynamic>;
     final list = body['data']['messages'] as List<dynamic>;
-    return list
-        .map((e) => Message.fromJson(e as Map<String, dynamic>))
-        .toList();
+    return list.map((e) => Message.fromJson(e as Map<String, dynamic>)).toList();
   }
 
   Future<Message> createMessage({
@@ -109,6 +104,9 @@ class ApiService {
     required double latitude,
     required double longitude,
     String visibility = 'public',
+    String messageType = 'standard',
+    int mysteryRadius = 50,
+    String? scheduledAt,
   }) async {
     final response = await http.post(
       Uri.parse('${ApiConfig.baseUrl}/messages'),
@@ -118,10 +116,12 @@ class ApiService {
         'latitude': latitude,
         'longitude': longitude,
         'visibility': visibility,
+        'message_type': messageType,
+        if (messageType == 'mystery') 'mystery_radius': mysteryRadius,
+        if (scheduledAt != null) 'scheduled_at': scheduledAt,
       }),
     );
     _checkError(response);
-
     final body = jsonDecode(response.body) as Map<String, dynamic>;
     return Message.fromJson(body['data'] as Map<String, dynamic>);
   }
@@ -140,12 +140,74 @@ class ApiService {
       headers: _headers,
     );
     _checkError(response);
-
     final body = jsonDecode(response.body) as Map<String, dynamic>;
     final list = body['data']['messages'] as List<dynamic>;
-    return list
-        .map((e) => Message.fromJson(e as Map<String, dynamic>))
-        .toList();
+    return list.map((e) => Message.fromJson(e as Map<String, dynamic>)).toList();
+  }
+
+  // ---- Mystery unlock ----
+
+  Future<Map<String, dynamic>> unlockMystery(String messageId, double lat, double lng) async {
+    final response = await http.post(
+      Uri.parse('${ApiConfig.baseUrl}/messages/$messageId/unlock'),
+      headers: _headers,
+      body: jsonEncode({'latitude': lat, 'longitude': lng}),
+    );
+    _checkError(response);
+    final body = jsonDecode(response.body) as Map<String, dynamic>;
+    return body['data'] as Map<String, dynamic>;
+  }
+
+  // ---- Heatmap ----
+
+  Future<List<Map<String, dynamic>>> getHeatmap(double lat, double lng, {int radius = 1000}) async {
+    final uri = Uri.parse('${ApiConfig.baseUrl}/heatmap').replace(queryParameters: {
+      'lat': lat.toString(),
+      'lng': lng.toString(),
+      'radius': radius.toString(),
+    });
+    final response = await http.get(uri, headers: _headers);
+    _checkError(response);
+    final body = jsonDecode(response.body) as Map<String, dynamic>;
+    final list = body['data']['points'] as List<dynamic>;
+    return list.cast<Map<String, dynamic>>();
+  }
+
+  // ---- Leaderboard ----
+
+  Future<List<Map<String, dynamic>>> getLeaderboard(double lat, double lng, {int radius = 5000}) async {
+    final uri = Uri.parse('${ApiConfig.baseUrl}/leaderboard').replace(queryParameters: {
+      'lat': lat.toString(),
+      'lng': lng.toString(),
+      'radius': radius.toString(),
+    });
+    final response = await http.get(uri, headers: _headers);
+    _checkError(response);
+    final body = jsonDecode(response.body) as Map<String, dynamic>;
+    final list = body['data']['leaderboard'] as List<dynamic>;
+    return list.cast<Map<String, dynamic>>();
+  }
+
+  // ---- Gamification profile ----
+
+  Future<Map<String, dynamic>> getMyProfile() async {
+    final response = await http.get(
+      Uri.parse('${ApiConfig.baseUrl}/me/profile'),
+      headers: _headers,
+    );
+    _checkError(response);
+    final body = jsonDecode(response.body) as Map<String, dynamic>;
+    return body['data'] as Map<String, dynamic>;
+  }
+
+  Future<Map<String, dynamic>> getUserProfile(String userId) async {
+    final response = await http.get(
+      Uri.parse('${ApiConfig.baseUrl}/users/$userId/profile'),
+      headers: _headers,
+    );
+    _checkError(response);
+    final body = jsonDecode(response.body) as Map<String, dynamic>;
+    return body['data'] as Map<String, dynamic>;
   }
 
   // ---- Interactions ----
@@ -161,7 +223,6 @@ class ApiService {
       headers: _headers,
     );
     _checkError(response);
-
     final body = jsonDecode(response.body) as Map<String, dynamic>;
     return body['data'] as Map<String, dynamic>;
   }
@@ -172,7 +233,6 @@ class ApiService {
       headers: _headers,
     );
     _checkError(response);
-
     final body = jsonDecode(response.body) as Map<String, dynamic>;
     final list = body['data']['comments'] as List<dynamic>;
     return list.cast<Map<String, dynamic>>();

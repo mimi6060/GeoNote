@@ -38,12 +38,16 @@ class MessagesProvider extends ChangeNotifier {
     required double latitude,
     required double longitude,
     String visibility = 'public',
+    String messageType = 'standard',
+    String? scheduledAt,
   }) async {
     await _api.createMessage(
       content: content,
       latitude: latitude,
       longitude: longitude,
       visibility: visibility,
+      messageType: messageType,
+      scheduledAt: scheduledAt,
     );
   }
 
