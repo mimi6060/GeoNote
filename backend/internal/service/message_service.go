@@ -199,3 +199,11 @@ func (s *MessageService) GetLeaderboard(ctx context.Context, lat, lng float64, r
 	}
 	return s.repo.GetLeaderboard(ctx, lat, lng, radius, limit)
 }
+
+// DetectEvents returns active event clusters nearby.
+func (s *MessageService) DetectEvents(ctx context.Context, lat, lng float64, radius int) ([]model.Event, error) {
+	if radius > 10000 {
+		radius = 10000
+	}
+	return s.repo.DetectEvents(ctx, lat, lng, radius)
+}

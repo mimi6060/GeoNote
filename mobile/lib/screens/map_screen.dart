@@ -9,6 +9,7 @@ import 'package:provider/provider.dart';
 
 import '../config/theme.dart';
 import '../providers/auth_provider.dart';
+import '../providers/events_provider.dart';
 import '../providers/messages_provider.dart';
 import '../services/location_service.dart';
 import '../services/ws_service.dart';
@@ -74,6 +75,7 @@ class _MapScreenState extends State<MapScreen> {
     _lastLoadCenter = _center;
     _lastLoad = DateTime.now();
     context.read<MessagesProvider>().loadNearby(_center, radius: 1000);
+    context.read<EventsProvider>().loadNearby(_center, radius: 5000);
   }
 
   /// Smart reload: only if moved > 100m AND at least 5s since last load.
@@ -127,9 +129,85 @@ class _MapScreenState extends State<MapScreen> {
     );
   }
 
+  void _showEventSheet(GeoEvent event) {
+    showModalBottomSheet(
+      context: context,
+      backgroundColor: Colors.transparent,
+      builder: (_) => Container(
+        decoration: const BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+        ),
+        padding: const EdgeInsets.fromLTRB(20, 12, 20, 24),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Center(
+              child: Container(
+                width: 36, height: 4,
+                decoration: BoxDecoration(
+                  color: Colors.grey[300],
+                  borderRadius: BorderRadius.circular(2),
+                ),
+              ),
+            ),
+            const SizedBox(height: 16),
+            Row(
+              children: [
+                Container(
+                  width: 40, height: 40,
+                  decoration: BoxDecoration(
+                    color: Colors.red.withOpacity(0.15),
+                    shape: BoxShape.circle,
+                  ),
+                  child: const Icon(Icons.local_fire_department, color: Colors.red, size: 22),
+                ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      const Text('EVENT DETECTED',
+                          style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: Colors.red)),
+                      Text(event.subtitle,
+                          style: TextStyle(fontSize: 12, color: Colors.grey[500])),
+                    ],
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 16),
+            Row(
+              children: [
+                _EventStat(icon: Icons.chat_bubble_outline, value: '${event.messageCount}', label: 'messages'),
+                const SizedBox(width: 24),
+                _EventStat(icon: Icons.people_outline, value: '${event.userCount}', label: 'personnes'),
+              ],
+            ),
+            if (event.topHashtags.isNotEmpty) ...[
+              const SizedBox(height: 12),
+              Wrap(
+                spacing: 6,
+                children: event.topHashtags.map((tag) => Chip(
+                  label: Text('#$tag', style: const TextStyle(fontSize: 11)),
+                  backgroundColor: Colors.red.withOpacity(0.08),
+                  materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                  visualDensity: VisualDensity.compact,
+                )).toList(),
+              ),
+            ],
+          ],
+        ),
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final messagesProvider = context.watch<MessagesProvider>();
+    final eventsProvider = context.watch<EventsProvider>();
+
     final markers = messagesProvider.messages.map((msg) {
       return Marker(
         point: LatLng(msg.latitude, msg.longitude),
@@ -151,6 +229,41 @@ class _MapScreenState extends State<MapScreen> {
               ],
             ),
             child: const Icon(Icons.chat_bubble, color: Colors.white, size: 20),
+          ),
+        ),
+      );
+    }).toList();
+
+    final eventMarkers = eventsProvider.events.map((event) {
+      return Marker(
+        point: LatLng(event.lat, event.lng),
+        width: 60,
+        height: 60,
+        child: GestureDetector(
+          onTap: () => _showEventSheet(event),
+          child: Container(
+            decoration: BoxDecoration(
+              color: Colors.red,
+              shape: BoxShape.circle,
+              border: Border.all(color: Colors.white, width: 3),
+              boxShadow: [
+                BoxShadow(
+                  color: Colors.red.withOpacity(0.4),
+                  blurRadius: 12,
+                  spreadRadius: 2,
+                ),
+              ],
+            ),
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                const Icon(Icons.local_fire_department, color: Colors.white, size: 18),
+                Text(
+                  '${event.messageCount}',
+                  style: const TextStyle(color: Colors.white, fontSize: 10, fontWeight: FontWeight.bold),
+                ),
+              ],
+            ),
           ),
         ),
       );
@@ -189,7 +302,7 @@ class _MapScreenState extends State<MapScreen> {
                 options: MarkerClusterLayerOptions(
                   maxClusterRadius: 45,
                   size: const Size(44, 44),
-                  markers: markers,
+                  markers: [...markers, ...eventMarkers],
                   builder: (context, clusterMarkers) {
                     return Container(
                       decoration: BoxDecoration(
@@ -325,6 +438,26 @@ class _MapButton extends StatelessWidget {
         ),
         child: Icon(icon, size: 20, color: Colors.black87),
       ),
+    );
+  }
+}
+
+class _EventStat extends StatelessWidget {
+  final IconData icon;
+  final String value;
+  final String label;
+  const _EventStat({required this.icon, required this.value, required this.label});
+
+  @override
+  Widget build(BuildContext context) {
+    return Row(
+      children: [
+        Icon(icon, size: 18, color: Colors.red),
+        const SizedBox(width: 6),
+        Text(value, style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
+        const SizedBox(width: 4),
+        Text(label, style: TextStyle(fontSize: 12, color: Colors.grey[500])),
+      ],
     );
   }
 }

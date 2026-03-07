@@ -100,3 +100,13 @@ type Badge struct {
 	BadgeType string    `json:"badge_type"`
 	EarnedAt  time.Time `json:"earned_at"`
 }
+
+type Event struct {
+	GridLat        float64   `json:"grid_lat"`
+	GridLng        float64   `json:"grid_lng"`
+	MessageCount   int64     `json:"message_count"`
+	UserCount      int64     `json:"user_count"`
+	FirstMessageAt time.Time `json:"first_message_at"`
+	LastMessageAt  time.Time `json:"last_message_at"`
+	TopHashtags    []string  `json:"top_hashtags"`
+}

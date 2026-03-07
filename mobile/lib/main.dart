@@ -3,6 +3,7 @@ import 'package:provider/provider.dart';
 
 import 'config/theme.dart';
 import 'providers/auth_provider.dart';
+import 'providers/events_provider.dart';
 import 'providers/messages_provider.dart';
 import 'screens/home_screen.dart';
 import 'screens/login_screen.dart';
@@ -20,6 +21,7 @@ class GeoNoteApp extends StatelessWidget {
       providers: [
         ChangeNotifierProvider(create: (_) => AuthProvider()),
         ChangeNotifierProvider(create: (_) => MessagesProvider()),
+        ChangeNotifierProvider(create: (_) => EventsProvider()),
       ],
       child: MaterialApp(
         title: 'GeoNote',

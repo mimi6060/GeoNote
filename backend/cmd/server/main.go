@@ -97,6 +97,7 @@ func main() {
 			r.Get("/messages/nearby", messageH.GetNearby)
 			r.Get("/heatmap", messageH.GetHeatmap)
 			r.Get("/leaderboard", messageH.GetLeaderboard)
+			r.Get("/events", messageH.DetectEvents)
 		})
 		r.Get("/users/{id}/messages", messageH.GetByUser)
 		r.Get("/users/{id}/profile", gamH.GetUserProfile)

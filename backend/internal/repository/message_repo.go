@@ -241,6 +241,29 @@ func (r *MessageRepo) GetLeaderboard(ctx context.Context, lat, lng float64, radi
 	return entries, nil
 }
 
+// DetectEvents finds clusters of recent messages indicating live events.
+func (r *MessageRepo) DetectEvents(ctx context.Context, lat, lng float64, radius int) ([]model.Event, error) {
+	rows, err := r.pool.Query(ctx,
+		`SELECT grid_lat, grid_lng, message_count, user_count, first_message_at, last_message_at, top_hashtags
+		 FROM detect_events($1, $2, $3)`,
+		lat, lng, radius)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	var events []model.Event
+	for rows.Next() {
+		var e model.Event
+		if err := rows.Scan(&e.GridLat, &e.GridLng, &e.MessageCount, &e.UserCount,
+			&e.FirstMessageAt, &e.LastMessageAt, &e.TopHashtags); err != nil {
+			return nil, err
+		}
+		events = append(events, e)
+	}
+	return events, nil
+}
+
 func extractHashtags(content string) []string {
 	matches := hashtagRe.FindAllStringSubmatch(content, -1)
 	seen := make(map[string]bool)

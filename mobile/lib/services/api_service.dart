@@ -210,6 +210,21 @@ class ApiService {
     return body['data'] as Map<String, dynamic>;
   }
 
+  // ---- Events ----
+
+  Future<List<Map<String, dynamic>>> getEvents(double lat, double lng, {int radius = 5000}) async {
+    final uri = Uri.parse('${ApiConfig.baseUrl}/events').replace(queryParameters: {
+      'lat': lat.toString(),
+      'lng': lng.toString(),
+      'radius': radius.toString(),
+    });
+    final response = await http.get(uri, headers: _headers);
+    _checkError(response);
+    final body = jsonDecode(response.body) as Map<String, dynamic>;
+    final list = body['data']['events'] as List<dynamic>;
+    return list.cast<Map<String, dynamic>>();
+  }
+
   // ---- Interactions ----
 
   Future<bool> toggleLike(String messageId) async {

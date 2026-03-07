@@ -193,6 +193,30 @@ func (h *MessageHandler) GetLeaderboard(w http.ResponseWriter, r *http.Request) 
 	})
 }
 
+// DetectEvents handles GET /events
+func (h *MessageHandler) DetectEvents(w http.ResponseWriter, r *http.Request) {
+	lat := parseFloat(r, "lat", 48.8566)
+	lng := parseFloat(r, "lng", 2.3522)
+	radius := parseInt(r, "radius", 5000)
+	if radius > 10000 {
+		radius = 10000
+	}
+
+	events, err := h.svc.DetectEvents(r.Context(), lat, lng, radius)
+	if err != nil {
+		WriteError(w, http.StatusInternalServerError, "EVENTS_ERROR", "Erreur serveur")
+		return
+	}
+	if events == nil {
+		events = []model.Event{}
+	}
+
+	WriteJSON(w, http.StatusOK, map[string]interface{}{
+		"events": events,
+		"count":  len(events),
+	})
+}
+
 func parseFloat(r *http.Request, key string, fallback float64) float64 {
 	v, err := strconv.ParseFloat(r.URL.Query().Get(key), 64)
 	if err != nil {
