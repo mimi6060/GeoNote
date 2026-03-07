@@ -6,81 +6,192 @@ import '../models/message.dart';
 
 class MessageCard extends StatelessWidget {
   final Message message;
-  final VoidCallback? onDelete;
   final VoidCallback? onTap;
+  final VoidCallback? onLike;
+  final VoidCallback? onDelete;
+  final bool showDelete;
 
   const MessageCard({
     super.key,
     required this.message,
-    this.onDelete,
     this.onTap,
+    this.onLike,
+    this.onDelete,
+    this.showDelete = false,
   });
 
   @override
   Widget build(BuildContext context) {
-    return Card(
-      margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
-      child: InkWell(
-        onTap: onTap,
-        borderRadius: BorderRadius.circular(12),
-        child: Padding(
-          padding: const EdgeInsets.all(16),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              // Header
-              Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: [
-                  Row(
-                    children: [
-                      const Icon(Icons.location_on,
-                          size: 14, color: GeoNoteTheme.primary),
-                      const SizedBox(width: 4),
-                      Text(
-                        '${message.latitude.toStringAsFixed(4)}, ${message.longitude.toStringAsFixed(4)}',
-                        style: TextStyle(fontSize: 12, color: Colors.grey[500]),
-                      ),
-                    ],
-                  ),
-                  _VisibilityBadge(visibility: message.visibility),
-                ],
-              ),
-              const SizedBox(height: 8),
-              // Content
-              Text(message.content, style: const TextStyle(fontSize: 14, height: 1.4)),
-              const SizedBox(height: 8),
-              // Footer
-              Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: [
-                  Text(
-                    '${message.likesCount} likes  ${message.commentsCount} commentaires  ${_formatDate(message.createdAt)}',
-                    style: TextStyle(fontSize: 12, color: Colors.grey[500]),
-                  ),
-                  if (onDelete != null)
-                    GestureDetector(
-                      onTap: onDelete,
-                      child: const Text(
-                        'Supprimer',
-                        style: TextStyle(fontSize: 12, color: Colors.red),
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
+      child: Card(
+        elevation: 0,
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(16),
+          side: BorderSide(color: Colors.grey.withOpacity(0.12)),
+        ),
+        child: InkWell(
+          onTap: onTap,
+          borderRadius: BorderRadius.circular(16),
+          child: Padding(
+            padding: const EdgeInsets.all(16),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                // Header: avatar + username + time
+                Row(
+                  children: [
+                    CircleAvatar(
+                      radius: 18,
+                      backgroundColor: GeoNoteTheme.primary.withOpacity(0.15),
+                      child: Text(
+                        message.username.isNotEmpty
+                            ? message.username[0].toUpperCase()
+                            : '?',
+                        style: const TextStyle(
+                          fontWeight: FontWeight.bold,
+                          color: GeoNoteTheme.primary,
+                          fontSize: 15,
+                        ),
                       ),
                     ),
+                    const SizedBox(width: 10),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            '@${message.username}',
+                            style: const TextStyle(
+                              fontWeight: FontWeight.w600,
+                              fontSize: 14,
+                            ),
+                          ),
+                          Row(
+                            children: [
+                              Icon(Icons.place, size: 12, color: Colors.grey[400]),
+                              const SizedBox(width: 2),
+                              if (message.distanceMeters != null)
+                                Text(
+                                  message.distanceFormatted,
+                                  style: TextStyle(fontSize: 11, color: Colors.grey[400]),
+                                ),
+                              if (message.distanceMeters != null)
+                                Text(' · ', style: TextStyle(color: Colors.grey[400], fontSize: 11)),
+                              Text(
+                                _timeAgo(message.createdAt),
+                                style: TextStyle(fontSize: 11, color: Colors.grey[400]),
+                              ),
+                            ],
+                          ),
+                        ],
+                      ),
+                    ),
+                    _VisibilityBadge(visibility: message.visibility),
+                  ],
+                ),
+                const SizedBox(height: 12),
+                // Content
+                Text(
+                  message.content,
+                  style: const TextStyle(fontSize: 15, height: 1.45),
+                ),
+                // Hashtags
+                if (message.hashtags.isNotEmpty) ...[
+                  const SizedBox(height: 10),
+                  Wrap(
+                    spacing: 6,
+                    runSpacing: 4,
+                    children: message.hashtags.map((tag) {
+                      return Text(
+                        '#$tag',
+                        style: const TextStyle(
+                          fontSize: 13,
+                          color: GeoNoteTheme.primary,
+                          fontWeight: FontWeight.w500,
+                        ),
+                      );
+                    }).toList(),
+                  ),
                 ],
-              ),
-            ],
+                const SizedBox(height: 12),
+                // Actions
+                Row(
+                  children: [
+                    _ActionButton(
+                      icon: Icons.favorite_border,
+                      activeIcon: Icons.favorite,
+                      label: '${message.likesCount}',
+                      color: Colors.red[400]!,
+                      onTap: onLike,
+                    ),
+                    const SizedBox(width: 20),
+                    _ActionButton(
+                      icon: Icons.chat_bubble_outline,
+                      label: '${message.commentsCount}',
+                      color: Colors.grey[600]!,
+                      onTap: onTap,
+                    ),
+                    const Spacer(),
+                    if (showDelete && onDelete != null)
+                      GestureDetector(
+                        onTap: onDelete,
+                        child: Icon(Icons.delete_outline, size: 20, color: Colors.grey[400]),
+                      ),
+                  ],
+                ),
+              ],
+            ),
           ),
         ),
       ),
     );
   }
 
-  String _formatDate(DateTime date) {
+  String _timeAgo(DateTime date) {
     final diff = DateTime.now().difference(date);
-    if (diff.inMinutes < 60) return 'il y a ${diff.inMinutes}min';
-    if (diff.inHours < 24) return 'il y a ${diff.inHours}h';
-    if (diff.inDays < 7) return 'il y a ${diff.inDays}j';
+    if (diff.inMinutes < 1) return 'a l\'instant';
+    if (diff.inMinutes < 60) return '${diff.inMinutes}min';
+    if (diff.inHours < 24) return '${diff.inHours}h';
+    if (diff.inDays < 7) return '${diff.inDays}j';
     return DateFormat('dd/MM').format(date);
+  }
+}
+
+class _ActionButton extends StatelessWidget {
+  final IconData icon;
+  final IconData? activeIcon;
+  final String label;
+  final Color color;
+  final VoidCallback? onTap;
+
+  const _ActionButton({
+    required this.icon,
+    this.activeIcon,
+    required this.label,
+    required this.color,
+    this.onTap,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return GestureDetector(
+      onTap: onTap,
+      behavior: HitTestBehavior.opaque,
+      child: Padding(
+        padding: const EdgeInsets.symmetric(vertical: 4),
+        child: Row(
+          children: [
+            Icon(icon, size: 20, color: color),
+            const SizedBox(width: 4),
+            Text(
+              label,
+              style: TextStyle(color: color, fontSize: 13, fontWeight: FontWeight.w500),
+            ),
+          ],
+        ),
+      ),
+    );
   }
 }
 
@@ -90,22 +201,12 @@ class _VisibilityBadge extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final (Color bg, Color fg) = switch (visibility) {
-      'public' => (const Color(0xFFE8F5E9), const Color(0xFF2E7D32)),
-      'friends' => (const Color(0xFFE3F2FD), const Color(0xFF1565C0)),
-      _ => (const Color(0xFFF5F5F5), const Color(0xFF757575)),
+    final (IconData icon, Color color) = switch (visibility) {
+      'public' => (Icons.public, const Color(0xFF4CAF50)),
+      'friends' => (Icons.group, const Color(0xFF2196F3)),
+      _ => (Icons.lock, const Color(0xFF9E9E9E)),
     };
 
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
-      decoration: BoxDecoration(
-        color: bg,
-        borderRadius: BorderRadius.circular(10),
-      ),
-      child: Text(
-        visibility,
-        style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: fg),
-      ),
-    );
+    return Icon(icon, size: 16, color: color.withOpacity(0.6));
   }
 }

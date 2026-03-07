@@ -44,9 +44,6 @@ class _LoginScreenState extends State<LoginScreen> {
           password: _passwordController.text,
         );
       }
-      if (mounted) {
-        Navigator.pushReplacementNamed(context, '/map');
-      }
     } on ApiException catch (e) {
       setState(() => _error = e.message);
     }
@@ -64,9 +61,16 @@ class _LoginScreenState extends State<LoginScreen> {
             child: Column(
               mainAxisSize: MainAxisSize.min,
               children: [
-                const Icon(Icons.location_on,
-                    size: 64, color: GeoNoteTheme.primary),
-                const SizedBox(height: 16),
+                Container(
+                  width: 80,
+                  height: 80,
+                  decoration: BoxDecoration(
+                    color: GeoNoteTheme.primary.withOpacity(0.1),
+                    shape: BoxShape.circle,
+                  ),
+                  child: const Icon(Icons.location_on, size: 44, color: GeoNoteTheme.primary),
+                ),
+                const SizedBox(height: 20),
                 Text(
                   'GeoNote',
                   style: Theme.of(context).textTheme.headlineMedium?.copyWith(
@@ -75,10 +79,9 @@ class _LoginScreenState extends State<LoginScreen> {
                 ),
                 const SizedBox(height: 8),
                 Text(
-                  'Laissez des messages partout',
-                  style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                        color: Colors.grey,
-                      ),
+                  'Laissez des messages partout dans le monde',
+                  style: Theme.of(context).textTheme.bodyMedium?.copyWith(color: Colors.grey),
+                  textAlign: TextAlign.center,
                 ),
                 const SizedBox(height: 48),
                 if (_isRegister)
@@ -88,6 +91,7 @@ class _LoginScreenState extends State<LoginScreen> {
                       labelText: 'Pseudo',
                       prefixIcon: Icon(Icons.person_outline),
                     ),
+                    textInputAction: TextInputAction.next,
                   ),
                 if (_isRegister) const SizedBox(height: 16),
                 TextField(
@@ -97,6 +101,7 @@ class _LoginScreenState extends State<LoginScreen> {
                     labelText: 'Email',
                     prefixIcon: Icon(Icons.email_outlined),
                   ),
+                  textInputAction: TextInputAction.next,
                 ),
                 const SizedBox(height: 16),
                 TextField(
@@ -110,7 +115,20 @@ class _LoginScreenState extends State<LoginScreen> {
                 ),
                 if (_error != null) ...[
                   const SizedBox(height: 16),
-                  Text(_error!, style: const TextStyle(color: Colors.red)),
+                  Container(
+                    padding: const EdgeInsets.all(12),
+                    decoration: BoxDecoration(
+                      color: Colors.red.withOpacity(0.08),
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    child: Row(
+                      children: [
+                        const Icon(Icons.error_outline, color: Colors.red, size: 20),
+                        const SizedBox(width: 8),
+                        Expanded(child: Text(_error!, style: const TextStyle(color: Colors.red, fontSize: 13))),
+                      ],
+                    ),
+                  ),
                 ],
                 const SizedBox(height: 24),
                 SizedBox(
@@ -118,16 +136,18 @@ class _LoginScreenState extends State<LoginScreen> {
                   height: 52,
                   child: FilledButton(
                     onPressed: auth.loading ? null : _submit,
+                    style: FilledButton.styleFrom(
+                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                    ),
                     child: auth.loading
                         ? const SizedBox(
-                            width: 20,
-                            height: 20,
-                            child: CircularProgressIndicator(
-                              strokeWidth: 2,
-                              color: Colors.white,
-                            ),
+                            width: 20, height: 20,
+                            child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white),
                           )
-                        : Text(_isRegister ? 'Creer un compte' : 'Se connecter'),
+                        : Text(
+                            _isRegister ? 'Creer un compte' : 'Se connecter',
+                            style: const TextStyle(fontSize: 16),
+                          ),
                   ),
                 ),
                 const SizedBox(height: 16),

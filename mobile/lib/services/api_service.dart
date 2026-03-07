@@ -123,6 +123,20 @@ class ApiService {
     _checkError(response);
   }
 
+  Future<List<Message>> getUserMessages(String userId) async {
+    final response = await http.get(
+      Uri.parse('${ApiConfig.baseUrl}/users/$userId/messages'),
+      headers: _headers,
+    );
+    _checkError(response);
+
+    final body = jsonDecode(response.body) as Map<String, dynamic>;
+    final list = body['data']['messages'] as List<dynamic>;
+    return list
+        .map((e) => Message.fromJson(e as Map<String, dynamic>))
+        .toList();
+  }
+
   // ---- Interactions ----
 
   Future<bool> toggleLike(String messageId) async {

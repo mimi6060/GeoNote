@@ -28,13 +28,17 @@ func (r *MessageRepo) Create(ctx context.Context, userID string, req model.Creat
 
 	msg := &model.Message{}
 	err := r.pool.QueryRow(ctx,
-		`INSERT INTO messages (user_id, content, latitude, longitude, visibility, hashtags)
-		 VALUES ($1, $2, $3, $4, $5, $6)
-		 RETURNING id, user_id, content, latitude, longitude, visibility, hashtags,
-		           likes_count, comments_count, created_at`,
+		`WITH ins AS (
+		   INSERT INTO messages (user_id, content, latitude, longitude, visibility, hashtags)
+		   VALUES ($1, $2, $3, $4, $5, $6)
+		   RETURNING *
+		 )
+		 SELECT ins.id, ins.user_id, u.username, ins.content, ins.latitude, ins.longitude,
+		        ins.visibility, ins.hashtags, ins.likes_count, ins.comments_count, ins.created_at
+		 FROM ins JOIN users u ON ins.user_id = u.id`,
 		userID, strings.TrimSpace(req.Content), req.Latitude, req.Longitude, vis, hashtags,
 	).Scan(
-		&msg.ID, &msg.UserID, &msg.Content, &msg.Latitude, &msg.Longitude,
+		&msg.ID, &msg.UserID, &msg.Username, &msg.Content, &msg.Latitude, &msg.Longitude,
 		&msg.Visibility, &msg.Hashtags, &msg.LikesCount, &msg.CommentsCount, &msg.CreatedAt,
 	)
 	if err != nil {

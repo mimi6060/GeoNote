@@ -7,10 +7,12 @@ import 'package:latlong2/latlong.dart';
 import 'package:provider/provider.dart';
 
 import '../config/theme.dart';
+import '../providers/auth_provider.dart';
 import '../providers/messages_provider.dart';
 import '../services/location_service.dart';
 import '../services/ws_service.dart';
 import '../widgets/message_popup.dart';
+import '../widgets/create_sheet.dart';
 import '../models/message.dart';
 
 class MapScreen extends StatefulWidget {
@@ -74,10 +76,23 @@ class _MapScreenState extends State<MapScreen> {
     showModalBottomSheet(
       context: context,
       isScrollControlled: true,
-      shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
+      backgroundColor: Colors.transparent,
+      builder: (_) => MessagePopup(message: message, onRefresh: _loadMessages),
+    );
+  }
+
+  void _showCreateSheet({LatLng? position}) {
+    final auth = context.read<AuthProvider>();
+    if (!auth.isLoggedIn) return;
+
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (_) => CreateSheet(
+        position: position ?? _center,
+        onCreated: _loadMessages,
       ),
-      builder: (_) => MessagePopup(message: message),
     );
   }
 
@@ -87,45 +102,30 @@ class _MapScreenState extends State<MapScreen> {
     final markers = messagesProvider.messages.map((msg) {
       return Marker(
         point: LatLng(msg.latitude, msg.longitude),
-        width: 40,
-        height: 40,
+        width: 44,
+        height: 44,
         child: GestureDetector(
           onTap: () => _showMessageSheet(msg),
-          child: const Icon(
-            Icons.location_pin,
-            color: GeoNoteTheme.primary,
-            size: 40,
+          child: Container(
+            decoration: BoxDecoration(
+              color: GeoNoteTheme.primary,
+              shape: BoxShape.circle,
+              border: Border.all(color: Colors.white, width: 2.5),
+              boxShadow: [
+                BoxShadow(
+                  color: Colors.black.withOpacity(0.2),
+                  blurRadius: 6,
+                  offset: const Offset(0, 2),
+                ),
+              ],
+            ),
+            child: const Icon(Icons.chat_bubble, color: Colors.white, size: 20),
           ),
         ),
       );
     }).toList();
 
     return Scaffold(
-      appBar: AppBar(
-        title: Row(
-          children: [
-            const Text('GeoNote'),
-            if (messagesProvider.loading)
-              const Padding(
-                padding: EdgeInsets.only(left: 12),
-                child: SizedBox(
-                  width: 16, height: 16,
-                  child: CircularProgressIndicator(strokeWidth: 2),
-                ),
-              ),
-          ],
-        ),
-        actions: [
-          IconButton(
-            icon: const Icon(Icons.my_location),
-            onPressed: _initLocation,
-          ),
-          IconButton(
-            icon: const Icon(Icons.person_outline),
-            onPressed: () => Navigator.pushNamed(context, '/profile'),
-          ),
-        ],
-      ),
       body: Stack(
         children: [
           FlutterMap(
@@ -134,10 +134,13 @@ class _MapScreenState extends State<MapScreen> {
               initialCenter: _center,
               initialZoom: 13,
               onPositionChanged: (pos, _) {
-                _center = pos.center;
+                _center = pos.center ?? _center;
               },
               onMapEvent: (event) {
                 if (event is MapEventMoveEnd) _onMapMoved();
+              },
+              onLongPress: (tapPos, latlng) {
+                _showCreateSheet(position: latlng);
               },
             ),
             children: [
@@ -148,12 +151,12 @@ class _MapScreenState extends State<MapScreen> {
               MarkerClusterLayerWidget(
                 options: MarkerClusterLayerOptions(
                   maxClusterRadius: 45,
-                  size: const Size(40, 40),
+                  size: const Size(44, 44),
                   markers: markers,
                   builder: (context, clusterMarkers) {
                     return Container(
                       decoration: BoxDecoration(
-                        color: GeoNoteTheme.primary,
+                        color: GeoNoteTheme.primaryDark,
                         shape: BoxShape.circle,
                         border: Border.all(color: Colors.white, width: 3),
                         boxShadow: [
@@ -179,40 +182,111 @@ class _MapScreenState extends State<MapScreen> {
               ),
             ],
           ),
-          // Badge compteur
-          if (messagesProvider.messages.isNotEmpty)
-            Positioned(
-              top: 8,
-              left: 0,
-              right: 0,
-              child: Center(
-                child: Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
+          // Top bar
+          Positioned(
+            top: MediaQuery.of(context).padding.top + 8,
+            left: 12,
+            right: 12,
+            child: Row(
+              children: [
+                // Message count
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
                   decoration: BoxDecoration(
                     color: Colors.white,
-                    borderRadius: BorderRadius.circular(20),
+                    borderRadius: BorderRadius.circular(24),
                     boxShadow: [
                       BoxShadow(
                         color: Colors.black.withOpacity(0.1),
                         blurRadius: 8,
+                        offset: const Offset(0, 2),
                       ),
                     ],
                   ),
-                  child: Text(
-                    '${messagesProvider.messages.length} message${messagesProvider.messages.length > 1 ? 's' : ''} autour de vous',
-                    style: TextStyle(fontSize: 13, color: Colors.grey[600]),
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      const Icon(Icons.chat_bubble_outline, size: 16, color: GeoNoteTheme.primary),
+                      const SizedBox(width: 6),
+                      if (messagesProvider.loading)
+                        const SizedBox(
+                          width: 14, height: 14,
+                          child: CircularProgressIndicator(strokeWidth: 2, color: GeoNoteTheme.primary),
+                        )
+                      else
+                        Text(
+                          '${messagesProvider.messages.length} note${messagesProvider.messages.length != 1 ? 's' : ''}',
+                          style: const TextStyle(
+                            fontSize: 13,
+                            fontWeight: FontWeight.w600,
+                          ),
+                        ),
+                    ],
                   ),
+                ),
+                const Spacer(),
+                // GPS button
+                _MapButton(
+                  icon: Icons.my_location,
+                  onTap: _initLocation,
+                ),
+              ],
+            ),
+          ),
+          // Hint
+          Positioned(
+            bottom: 16,
+            left: 0,
+            right: 0,
+            child: Center(
+              child: Container(
+                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                decoration: BoxDecoration(
+                  color: Colors.black54,
+                  borderRadius: BorderRadius.circular(16),
+                ),
+                child: const Text(
+                  'Appui long pour deposer une note',
+                  style: TextStyle(color: Colors.white, fontSize: 11),
                 ),
               ),
             ),
+          ),
         ],
       ),
-      floatingActionButton: FloatingActionButton(
-        onPressed: () async {
-          final created = await Navigator.pushNamed(context, '/create');
-          if (created == true) _loadMessages();
-        },
-        child: const Icon(Icons.add),
+      floatingActionButton: FloatingActionButton.extended(
+        onPressed: () => _showCreateSheet(),
+        icon: const Icon(Icons.add),
+        label: const Text('Note'),
+      ),
+    );
+  }
+}
+
+class _MapButton extends StatelessWidget {
+  final IconData icon;
+  final VoidCallback onTap;
+  const _MapButton({required this.icon, required this.onTap});
+
+  @override
+  Widget build(BuildContext context) {
+    return GestureDetector(
+      onTap: onTap,
+      child: Container(
+        width: 42,
+        height: 42,
+        decoration: BoxDecoration(
+          color: Colors.white,
+          shape: BoxShape.circle,
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withOpacity(0.1),
+              blurRadius: 8,
+              offset: const Offset(0, 2),
+            ),
+          ],
+        ),
+        child: Icon(icon, size: 20, color: Colors.black87),
       ),
     );
   }
