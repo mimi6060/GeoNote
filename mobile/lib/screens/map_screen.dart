@@ -11,6 +11,7 @@ import '../config/theme.dart';
 import '../providers/auth_provider.dart';
 import '../providers/events_provider.dart';
 import '../providers/messages_provider.dart';
+import '../services/api_service.dart';
 import '../services/location_service.dart';
 import '../services/ws_service.dart';
 import '../widgets/message_popup.dart';
@@ -27,11 +28,14 @@ class MapScreen extends StatefulWidget {
 class _MapScreenState extends State<MapScreen> {
   final MapController _mapController = MapController();
   final WsService _ws = WsService();
+  final ApiService _api = ApiService();
   LatLng _center = LocationService.defaultLocation;
   LatLng _lastLoadCenter = LocationService.defaultLocation;
   StreamSubscription? _wsSub;
   Timer? _debounce;
   DateTime _lastLoad = DateTime.fromMillisecondsSinceEpoch(0);
+  bool _showHeatmap = false;
+  List<Map<String, dynamic>> _heatmapPoints = [];
 
   static const double _minReloadDistanceMeters = 100;
   static const Duration _minReloadInterval = Duration(seconds: 5);
@@ -76,6 +80,19 @@ class _MapScreenState extends State<MapScreen> {
     _lastLoad = DateTime.now();
     context.read<MessagesProvider>().loadNearby(_center, radius: 1000);
     context.read<EventsProvider>().loadNearby(_center, radius: 5000);
+    if (_showHeatmap) _loadHeatmap();
+  }
+
+  Future<void> _loadHeatmap() async {
+    try {
+      final points = await _api.getHeatmap(_center.latitude, _center.longitude, radius: 2000);
+      if (mounted) setState(() => _heatmapPoints = points);
+    } catch (_) {}
+  }
+
+  void _toggleHeatmap() {
+    setState(() => _showHeatmap = !_showHeatmap);
+    if (_showHeatmap) _loadHeatmap();
   }
 
   /// Smart reload: only if moved > 100m AND at least 5s since last load.
@@ -209,26 +226,99 @@ class _MapScreenState extends State<MapScreen> {
     final eventsProvider = context.watch<EventsProvider>();
 
     final markers = messagesProvider.messages.map((msg) {
+      final Color markerColor;
+      final Widget markerIcon;
+
+      if (msg.isMystery) {
+        markerColor = Colors.deepPurple;
+        markerIcon = msg.isLocked
+            ? const Text('???',
+                style: TextStyle(
+                    color: Colors.white,
+                    fontSize: 11,
+                    fontWeight: FontWeight.bold))
+            : const Icon(Icons.help_outline, color: Colors.white, size: 20);
+      } else if (msg.isCapsule) {
+        markerColor = Colors.purple;
+        markerIcon =
+            const Icon(Icons.schedule, color: Colors.white, size: 20);
+      } else {
+        markerColor = GeoNoteTheme.primary;
+        markerIcon =
+            const Icon(Icons.chat_bubble, color: Colors.white, size: 20);
+      }
+
       return Marker(
         point: LatLng(msg.latitude, msg.longitude),
         width: 44,
         height: 44,
         child: GestureDetector(
           onTap: () => _showMessageSheet(msg),
-          child: Container(
-            decoration: BoxDecoration(
-              color: GeoNoteTheme.primary,
-              shape: BoxShape.circle,
-              border: Border.all(color: Colors.white, width: 2.5),
-              boxShadow: [
-                BoxShadow(
-                  color: Colors.black.withOpacity(0.2),
-                  blurRadius: 6,
-                  offset: const Offset(0, 2),
+          child: Stack(
+            clipBehavior: Clip.none,
+            children: [
+              Container(
+                width: 44,
+                height: 44,
+                decoration: BoxDecoration(
+                  color: markerColor,
+                  shape: BoxShape.circle,
+                  border: Border.all(color: Colors.white, width: 2.5),
+                  boxShadow: [
+                    BoxShadow(
+                      color: Colors.black.withOpacity(0.2),
+                      blurRadius: 6,
+                      offset: const Offset(0, 2),
+                    ),
+                  ],
                 ),
-              ],
-            ),
-            child: const Icon(Icons.chat_bubble, color: Colors.white, size: 20),
+                child: Center(child: markerIcon),
+              ),
+              // Badge overlay for locked mystery messages
+              if (msg.isMystery && msg.isLocked)
+                Positioned(
+                  top: -4,
+                  right: -4,
+                  child: Container(
+                    width: 20,
+                    height: 20,
+                    decoration: BoxDecoration(
+                      color: Colors.amber,
+                      shape: BoxShape.circle,
+                      border: Border.all(color: Colors.white, width: 1.5),
+                    ),
+                    child: const Center(
+                      child: Text('?',
+                          style: TextStyle(
+                              color: Colors.black,
+                              fontSize: 12,
+                              fontWeight: FontWeight.bold)),
+                    ),
+                  ),
+                ),
+              // Red countdown badge for ephemeral standard messages
+              if (!msg.isMystery && !msg.isCapsule && msg.isEphemeral)
+                Positioned(
+                  top: -4,
+                  right: -4,
+                  child: Container(
+                    padding:
+                        const EdgeInsets.symmetric(horizontal: 4, vertical: 2),
+                    decoration: BoxDecoration(
+                      color: Colors.red,
+                      borderRadius: BorderRadius.circular(8),
+                      border: Border.all(color: Colors.white, width: 1.5),
+                    ),
+                    child: Text(
+                      msg.timeRemaining,
+                      style: const TextStyle(
+                          color: Colors.white,
+                          fontSize: 8,
+                          fontWeight: FontWeight.bold),
+                    ),
+                  ),
+                ),
+            ],
           ),
         ),
       );
@@ -298,6 +388,25 @@ class _MapScreenState extends State<MapScreen> {
                 userAgentPackageName: 'com.geonote.app',
                 maxZoom: 19,
               ),
+              // Heatmap layer
+              if (_showHeatmap && _heatmapPoints.isNotEmpty)
+                CircleLayer(
+                  circles: _heatmapPoints.map((p) {
+                    final intensity = (p['intensity'] as num?)?.toInt() ?? 1;
+                    final opacity = (intensity / 10).clamp(0.15, 0.6);
+                    final radius = (30 + intensity * 8).clamp(30, 120).toDouble();
+                    return CircleMarker(
+                      point: LatLng(
+                        (p['lat'] as num).toDouble(),
+                        (p['lng'] as num).toDouble(),
+                      ),
+                      radius: radius,
+                      color: Colors.orange.withOpacity(opacity),
+                      borderColor: Colors.orange.withOpacity(opacity * 0.5),
+                      borderStrokeWidth: 1,
+                    );
+                  }).toList(),
+                ),
               MarkerClusterLayerWidget(
                 options: MarkerClusterLayerOptions(
                   maxClusterRadius: 45,
@@ -375,6 +484,13 @@ class _MapScreenState extends State<MapScreen> {
                   ),
                 ),
                 const Spacer(),
+                // Heatmap toggle
+                _MapButton(
+                  icon: Icons.thermostat,
+                  onTap: _toggleHeatmap,
+                  active: _showHeatmap,
+                ),
+                const SizedBox(width: 8),
                 // GPS button
                 _MapButton(
                   icon: Icons.my_location,
@@ -416,7 +532,8 @@ class _MapScreenState extends State<MapScreen> {
 class _MapButton extends StatelessWidget {
   final IconData icon;
   final VoidCallback onTap;
-  const _MapButton({required this.icon, required this.onTap});
+  final bool active;
+  const _MapButton({required this.icon, required this.onTap, this.active = false});
 
   @override
   Widget build(BuildContext context) {
@@ -426,7 +543,7 @@ class _MapButton extends StatelessWidget {
         width: 42,
         height: 42,
         decoration: BoxDecoration(
-          color: Colors.white,
+          color: active ? GeoNoteTheme.primary : Colors.white,
           shape: BoxShape.circle,
           boxShadow: [
             BoxShadow(
@@ -436,7 +553,7 @@ class _MapButton extends StatelessWidget {
             ),
           ],
         ),
-        child: Icon(icon, size: 20, color: Colors.black87),
+        child: Icon(icon, size: 20, color: active ? Colors.white : Colors.black87),
       ),
     );
   }

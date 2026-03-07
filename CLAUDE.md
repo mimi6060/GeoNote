@@ -26,9 +26,10 @@ mobile/
     config/                    — API config, theme
     models/                    — Dart models (Message, User)
     providers/                 — State management (ChangeNotifier)
-    screens/                   — Map, Feed, Profile, Login
+    screens/                   — Map, Feed, Leaderboard, Profile, Login
     services/                  — API client, Location, WebSocket
     widgets/                   — CreateSheet, MessagePopup, MessageCard
+    providers/                 — MessagesProvider, EventsProvider, AuthProvider
 ```
 
 ## Database Schema
@@ -66,6 +67,7 @@ mobile/
 - Standard messages auto-expire after 24h (`expires_at = NOW() + 24h`)
 - SQL function filters: `WHERE expires_at IS NULL OR expires_at > NOW()`
 - Creates FOMO — users check daily what's near them
+- **Flutter**: red countdown badge on map markers, "Expire Xh" badge on cards/popup
 
 ### 2. Mystery Messages (geo-locked)
 - `message_type = 'mystery'`, content shows "???" until unlocked
@@ -73,24 +75,26 @@ mobile/
 - `POST /messages/{id}/unlock` checks distance via PostGIS
 - `message_unlocks` table tracks who unlocked
 - Badges: mystery_hunter_5, mystery_hunter_25
+- **Flutter**: purple markers with "?" badge, lock UI in popup with "Tenter de deverrouiller" button, unlock count display
 
 ### 3. Time Capsules (scheduled reveal)
 - `message_type = 'capsule'` with `scheduled_at` timestamp
 - Hidden until scheduled time: `WHERE scheduled_at IS NULL OR scheduled_at <= NOW()`
 - Expires 24h after reveal
-- Flutter UI: date+time picker
-- Badge: capsule_creator
+- **Flutter**: purple markers with clock icon, date+time picker in create sheet, "Capsule" badge on cards
 
 ### 4. Heatmap (zone activity)
 - `GET /heatmap` returns grid-aggregated points (3 decimal precision ~111m)
 - SQL function: `get_heatmap(lat, lng, radius)` groups by rounded coords
 - Shows where activity is happening in real-time
+- **Flutter**: toggle button on map (thermostat icon), CircleLayer with orange intensity circles
 
 ### 5. Streaks, Badges & Leaderboard
 - **Streaks**: consecutive posting days (auto-computed on each post)
 - **Badges**: first_post, explorer_5/10/25, streak_3/7/30, mystery_hunter_5/25, capsule_creator
 - **Leaderboard**: `GET /leaderboard` — local rankings (30-day window), score = posts*10 + likes*5
 - `user_streaks` and `user_badges` tables
+- **Flutter**: gamified profile (streak bar, badge chips), dedicated leaderboard tab with medals
 
 ### 6. Event Detection (bonus)
 - Auto-detects clusters of posts at same location = live event
@@ -98,8 +102,15 @@ mobile/
 - Threshold: >= 3 messages from >= 2 distinct users
 - Returns: grid coords, message count, user count, top hashtags
 - `GET /api/v1/events?lat=&lng=&radius=` (OptionalAuth, radius max 10km)
-- Flutter: red fire markers on map, tap for event details popup
+- **Flutter**: red fire markers on map, tap for event details popup (messages, users, hashtags)
 - Use cases: concerts, police, sports, protests, accidents
+
+## Flutter UI
+- **4 tabs**: Carte (map), Feed (list), Classement (leaderboard), Profil (gamified)
+- **Map markers**: type-based colors (green=standard, purple=mystery, purple=capsule, red=event)
+- **Badges**: countdown (ephemeral), lock (mystery), fire (events)
+- **Heatmap**: toggle overlay with orange intensity circles
+- **Create sheet**: 3 message types (Standard/Mystere/Capsule), visibility selector, date picker for capsules
 
 ## Performance
 - PostGIS `location geometry(Point, 4326)` with GIST index

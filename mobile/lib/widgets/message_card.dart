@@ -46,14 +46,23 @@ class MessageCard extends StatelessWidget {
                     children: [
                       CircleAvatar(
                         radius: 20,
-                        backgroundColor: GeoNoteTheme.primary.withOpacity(0.12),
-                        child: Text(
-                          message.username.isNotEmpty ? message.username[0].toUpperCase() : '?',
-                          style: const TextStyle(
-                            fontWeight: FontWeight.bold,
-                            color: GeoNoteTheme.primary,
-                            fontSize: 16,
-                          ),
+                        backgroundColor: message.isMystery
+                            ? Colors.deepPurple.withOpacity(0.12)
+                            : message.isCapsule
+                                ? Colors.purple.withOpacity(0.12)
+                                : GeoNoteTheme.primary.withOpacity(0.12),
+                        child: Icon(
+                          message.isMystery
+                              ? Icons.help_outline
+                              : message.isCapsule
+                                  ? Icons.schedule
+                                  : Icons.chat_bubble,
+                          size: 18,
+                          color: message.isMystery
+                              ? Colors.deepPurple
+                              : message.isCapsule
+                                  ? Colors.purple
+                                  : GeoNoteTheme.primary,
                         ),
                       ),
                       const SizedBox(width: 12),
@@ -86,6 +95,43 @@ class MessageCard extends StatelessWidget {
                     ],
                   ),
                   const SizedBox(height: 12),
+
+                  // ── Type badge ──
+                  if (message.isMystery || message.isCapsule || message.isEphemeral)
+                    Padding(
+                      padding: const EdgeInsets.only(bottom: 8),
+                      child: Row(
+                        children: [
+                          Container(
+                            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                            decoration: BoxDecoration(
+                              color: message.isMystery
+                                  ? Colors.deepPurple.withOpacity(0.08)
+                                  : message.isCapsule
+                                      ? Colors.purple.withOpacity(0.08)
+                                      : Colors.orange.withOpacity(0.08),
+                              borderRadius: BorderRadius.circular(10),
+                            ),
+                            child: Text(
+                              message.isMystery
+                                  ? 'Mystere${message.isLocked ? ' (verrouille)' : ''}'
+                                  : message.isCapsule
+                                      ? 'Capsule'
+                                      : 'Expire ${message.timeRemaining}',
+                              style: TextStyle(
+                                fontSize: 10,
+                                fontWeight: FontWeight.w600,
+                                color: message.isMystery
+                                    ? Colors.deepPurple
+                                    : message.isCapsule
+                                        ? Colors.purple
+                                        : Colors.orange,
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
 
                   // ── Content ──
                   Text(message.content,

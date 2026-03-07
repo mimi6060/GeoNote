@@ -6,6 +6,7 @@ import '../config/theme.dart';
 import '../models/message.dart';
 import '../providers/auth_provider.dart';
 import '../services/api_service.dart';
+import '../services/location_service.dart';
 
 class MessagePopup extends StatefulWidget {
   final Message message;
@@ -26,6 +27,8 @@ class _MessagePopupState extends State<MessagePopup> {
   int _likesCount = 0;
   bool _sendingComment = false;
   bool _showComments = false;
+  bool _unlocking = false;
+  String? _unlockedContent;
 
   @override
   void initState() {
@@ -78,6 +81,46 @@ class _MessagePopupState extends State<MessagePopup> {
           _likesCount += _liked ? 1 : -1;
         });
       }
+    }
+  }
+
+  Future<void> _unlockMystery() async {
+    setState(() => _unlocking = true);
+    try {
+      final location = await LocationService.getCurrentLocation();
+      if (location == null) {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text('Position GPS requise')),
+          );
+        }
+        return;
+      }
+      final result = await _api.unlockMystery(
+        widget.message.id,
+        location.latitude,
+        location.longitude,
+      );
+      final unlocked = result['unlocked'] as bool? ?? false;
+      if (unlocked && result['message'] != null) {
+        final msg = result['message'] as Map<String, dynamic>;
+        setState(() => _unlockedContent = msg['content'] as String?);
+        widget.onRefresh?.call();
+      } else {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text('Trop loin ! Rapprochez-vous du message.')),
+          );
+        }
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Erreur: $e')),
+        );
+      }
+    } finally {
+      if (mounted) setState(() => _unlocking = false);
     }
   }
 
@@ -167,9 +210,107 @@ class _MessagePopupState extends State<MessagePopup> {
                   ),
                   const SizedBox(height: 18),
 
+                  // ── Message type badge ──
+                  if (widget.message.isMystery || widget.message.isCapsule || widget.message.isEphemeral)
+                    Padding(
+                      padding: const EdgeInsets.only(bottom: 10),
+                      child: Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+                        decoration: BoxDecoration(
+                          color: widget.message.isMystery
+                              ? Colors.deepPurple.withOpacity(0.1)
+                              : widget.message.isCapsule
+                                  ? Colors.purple.withOpacity(0.1)
+                                  : Colors.orange.withOpacity(0.1),
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                        child: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Icon(
+                              widget.message.isMystery ? Icons.help_outline
+                                  : widget.message.isCapsule ? Icons.schedule
+                                  : Icons.timer,
+                              size: 14,
+                              color: widget.message.isMystery ? Colors.deepPurple
+                                  : widget.message.isCapsule ? Colors.purple
+                                  : Colors.orange,
+                            ),
+                            const SizedBox(width: 6),
+                            Text(
+                              widget.message.isMystery ? 'Message mystere'
+                                  : widget.message.isCapsule ? 'Capsule temporelle'
+                                  : 'Expire ${widget.message.timeRemaining}',
+                              style: TextStyle(
+                                fontSize: 11,
+                                fontWeight: FontWeight.w600,
+                                color: widget.message.isMystery ? Colors.deepPurple
+                                    : widget.message.isCapsule ? Colors.purple
+                                    : Colors.orange,
+                              ),
+                            ),
+                            if (widget.message.isMystery) ...[
+                              const SizedBox(width: 8),
+                              Text(
+                                '${widget.message.unlocksCount} unlock${widget.message.unlocksCount != 1 ? 's' : ''}',
+                                style: TextStyle(fontSize: 10, color: Colors.deepPurple[300]),
+                              ),
+                            ],
+                          ],
+                        ),
+                      ),
+                    ),
+
                   // ── Content ──
-                  Text(widget.message.content,
-                      style: const TextStyle(fontSize: 16, height: 1.55, letterSpacing: -0.1)),
+                  if (widget.message.isLocked && _unlockedContent == null)
+                    // Mystery locked: show unlock button
+                    Container(
+                      width: double.infinity,
+                      padding: const EdgeInsets.all(20),
+                      decoration: BoxDecoration(
+                        color: Colors.deepPurple.withOpacity(0.06),
+                        borderRadius: BorderRadius.circular(16),
+                        border: Border.all(color: Colors.deepPurple.withOpacity(0.2)),
+                      ),
+                      child: Column(
+                        children: [
+                          const Icon(Icons.lock, size: 32, color: Colors.deepPurple),
+                          const SizedBox(height: 10),
+                          const Text(
+                            'Ce message est verrouille',
+                            style: TextStyle(fontSize: 14, fontWeight: FontWeight.w600, color: Colors.deepPurple),
+                          ),
+                          const SizedBox(height: 4),
+                          Text(
+                            'Approchez-vous a moins de ${widget.message.mysteryRadius}m pour le lire',
+                            textAlign: TextAlign.center,
+                            style: TextStyle(fontSize: 12, color: Colors.grey[500]),
+                          ),
+                          const SizedBox(height: 14),
+                          if (isLoggedIn)
+                            SizedBox(
+                              width: double.infinity,
+                              child: FilledButton.icon(
+                                onPressed: _unlocking ? null : _unlockMystery,
+                                icon: _unlocking
+                                    ? const SizedBox(width: 16, height: 16,
+                                        child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white))
+                                    : const Icon(Icons.lock_open, size: 18),
+                                label: const Text('Tenter de deverrouiller'),
+                                style: FilledButton.styleFrom(
+                                  backgroundColor: Colors.deepPurple,
+                                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+                                ),
+                              ),
+                            ),
+                        ],
+                      ),
+                    )
+                  else
+                    Text(
+                      _unlockedContent ?? widget.message.content,
+                      style: const TextStyle(fontSize: 16, height: 1.55, letterSpacing: -0.1),
+                    ),
 
                   // ── Hashtags ──
                   if (widget.message.hashtags.isNotEmpty) ...[

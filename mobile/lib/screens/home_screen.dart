@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import '../config/theme.dart';
 import 'map_screen.dart';
 import 'feed_screen.dart';
+import 'leaderboard_screen.dart';
 import 'profile_screen.dart';
 
 class HomeScreen extends StatefulWidget {
@@ -18,6 +19,7 @@ class _HomeScreenState extends State<HomeScreen> {
   final _screens = const [
     MapScreen(),
     FeedScreen(),
+    LeaderboardScreen(),
     ProfileScreen(),
   ];
 
@@ -39,6 +41,11 @@ class _HomeScreenState extends State<HomeScreen> {
             icon: Icon(Icons.dynamic_feed_outlined),
             selectedIcon: Icon(Icons.dynamic_feed, color: GeoNoteTheme.primary),
             label: 'Feed',
+          ),
+          NavigationDestination(
+            icon: Icon(Icons.emoji_events_outlined),
+            selectedIcon: Icon(Icons.emoji_events, color: GeoNoteTheme.primary),
+            label: 'Classement',
           ),
           NavigationDestination(
             icon: Icon(Icons.person_outline),
