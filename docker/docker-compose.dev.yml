@@ -1,0 +1,11 @@
+# Override pour le developpement local
+# Usage: docker compose -f docker-compose.yml -f docker-compose.dev.yml up
+services:
+  api:
+    build:
+      context: ../backend
+    volumes:
+      - ../backend:/build
+    environment:
+      DATABASE_URL: postgres://geonote:geonote@db:5432/geonote?sslmode=disable
+      JWT_SECRET: dev-secret-change-me

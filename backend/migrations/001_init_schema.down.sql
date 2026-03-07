@@ -1,0 +1,8 @@
+DROP TRIGGER IF EXISTS trg_interaction_counts ON interactions;
+DROP FUNCTION IF EXISTS update_interaction_counts();
+DROP FUNCTION IF EXISTS get_nearby_messages(DOUBLE PRECISION, DOUBLE PRECISION, INTEGER, INTEGER);
+DROP TABLE IF EXISTS beta_signups;
+DROP TABLE IF EXISTS interactions;
+DROP TABLE IF EXISTS messages;
+DROP TABLE IF EXISTS users;
+DROP EXTENSION IF EXISTS "uuid-ossp";

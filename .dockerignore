@@ -1,8 +1,0 @@
-node_modules
-bmad
-docker
-.git
-*.md
-.dockerignore
-docker-compose.yml
-start.sh
