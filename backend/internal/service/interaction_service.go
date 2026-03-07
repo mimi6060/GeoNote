@@ -24,6 +24,10 @@ func (s *InteractionService) AddComment(ctx context.Context, messageID, userID, 
 	return s.repo.AddComment(ctx, messageID, userID, strings.TrimSpace(content))
 }
 
+func (s *InteractionService) DeleteComment(ctx context.Context, commentID, userID string) error {
+	return s.repo.DeleteComment(ctx, commentID, userID)
+}
+
 func (s *InteractionService) GetComments(ctx context.Context, messageID string) ([]model.Interaction, error) {
 	return s.repo.GetComments(ctx, messageID)
 }

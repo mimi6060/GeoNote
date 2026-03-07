@@ -101,6 +101,7 @@ func main() {
 
 			r.Post("/messages/{id}/like", interactionH.ToggleLike)
 			r.Post("/messages/{id}/comments", interactionH.AddComment)
+			r.Delete("/comments/{commentId}", interactionH.DeleteComment)
 		})
 
 		// Commentaires (lecture publique)

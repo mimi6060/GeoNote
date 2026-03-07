@@ -80,6 +80,20 @@ func (r *InteractionRepo) AddComment(ctx context.Context, messageID, userID, con
 	return interaction, nil
 }
 
+func (r *InteractionRepo) DeleteComment(ctx context.Context, commentID, userID string) error {
+	result, err := r.pool.Exec(ctx,
+		`DELETE FROM interactions WHERE id = $1 AND user_id = $2 AND type = 'comment'`,
+		commentID, userID,
+	)
+	if err != nil {
+		return err
+	}
+	if result.RowsAffected() == 0 {
+		return ErrNotFound
+	}
+	return nil
+}
+
 func (r *InteractionRepo) GetComments(ctx context.Context, messageID string) ([]model.Interaction, error) {
 	rows, err := r.pool.Query(ctx,
 		`SELECT i.id, i.message_id, i.user_id, u.username, i.type, i.content, i.created_at

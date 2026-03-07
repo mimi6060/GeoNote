@@ -101,6 +101,20 @@ class _MessagePopupState extends State<MessagePopup> {
     if (mounted) setState(() => _sendingComment = false);
   }
 
+  Future<void> _deleteComment(String commentId) async {
+    try {
+      await _api.deleteComment(commentId);
+      await _loadComments();
+      widget.onRefresh?.call();
+    } catch (_) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Erreur lors de la suppression')),
+        );
+      }
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     final auth = context.read<AuthProvider>();
@@ -233,7 +247,11 @@ class _MessagePopupState extends State<MessagePopup> {
                         ),
                       )
                     else
-                      ..._comments.map((c) => _CommentTile(comment: c)),
+                      ..._comments.map((c) => _CommentTile(
+                        comment: c,
+                        currentUserId: auth.user?.id,
+                        onDelete: () => _deleteComment(c['id'] as String),
+                      )),
                   ],
                   const SizedBox(height: 12),
                 ],
@@ -436,15 +454,26 @@ class _ActionPill extends StatelessWidget {
   }
 }
 
-class _CommentTile extends StatelessWidget {
+class _CommentTile extends StatefulWidget {
   final Map<String, dynamic> comment;
-  const _CommentTile({required this.comment});
+  final String? currentUserId;
+  final VoidCallback? onDelete;
+  const _CommentTile({required this.comment, this.currentUserId, this.onDelete});
+
+  @override
+  State<_CommentTile> createState() => _CommentTileState();
+}
+
+class _CommentTileState extends State<_CommentTile> {
+  bool _liked = false;
 
   @override
   Widget build(BuildContext context) {
-    final username = comment['username'] as String? ?? '?';
-    final content = comment['content'] as String? ?? '';
-    final createdAt = DateTime.tryParse(comment['created_at'] as String? ?? '');
+    final username = widget.comment['username'] as String? ?? '?';
+    final content = widget.comment['content'] as String? ?? '';
+    final userId = widget.comment['user_id'] as String? ?? '';
+    final createdAt = DateTime.tryParse(widget.comment['created_at'] as String? ?? '');
+    final isOwn = widget.currentUserId != null && userId == widget.currentUserId;
 
     String time = '';
     if (createdAt != null) {
@@ -476,32 +505,84 @@ class _CommentTile extends StatelessWidget {
           ),
           const SizedBox(width: 10),
           Expanded(
-            child: Container(
-              padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
-              decoration: BoxDecoration(
-                color: Colors.grey[50],
-                borderRadius: const BorderRadius.only(
-                  topRight: Radius.circular(16),
-                  bottomLeft: Radius.circular(16),
-                  bottomRight: Radius.circular(16),
-                ),
-              ),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Row(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+                  decoration: BoxDecoration(
+                    color: Colors.grey[50],
+                    borderRadius: const BorderRadius.only(
+                      topRight: Radius.circular(16),
+                      bottomLeft: Radius.circular(16),
+                      bottomRight: Radius.circular(16),
+                    ),
+                  ),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Text('@$username',
-                          style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 12)),
-                      const Spacer(),
-                      if (time.isNotEmpty)
-                        Text(time, style: TextStyle(fontSize: 11, color: Colors.grey[400])),
+                      Row(
+                        children: [
+                          Text('@$username',
+                              style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 12)),
+                          const Spacer(),
+                          if (time.isNotEmpty)
+                            Text(time, style: TextStyle(fontSize: 11, color: Colors.grey[400])),
+                        ],
+                      ),
+                      const SizedBox(height: 3),
+                      Text(content, style: const TextStyle(fontSize: 14, height: 1.35)),
                     ],
                   ),
-                  const SizedBox(height: 3),
-                  Text(content, style: const TextStyle(fontSize: 14, height: 1.35)),
-                ],
-              ),
+                ),
+                // Actions row under the bubble
+                Padding(
+                  padding: const EdgeInsets.only(left: 8, top: 4),
+                  child: Row(
+                    children: [
+                      // Like
+                      GestureDetector(
+                        onTap: () => setState(() => _liked = !_liked),
+                        child: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Icon(
+                              _liked ? Icons.favorite : Icons.favorite_border,
+                              size: 14,
+                              color: _liked ? Colors.red : Colors.grey[400],
+                            ),
+                            const SizedBox(width: 3),
+                            Text(
+                              'J\'aime',
+                              style: TextStyle(
+                                fontSize: 11,
+                                color: _liked ? Colors.red : Colors.grey[400],
+                                fontWeight: _liked ? FontWeight.w600 : FontWeight.normal,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                      // Delete (own comments only)
+                      if (isOwn && widget.onDelete != null) ...[
+                        const SizedBox(width: 16),
+                        GestureDetector(
+                          onTap: widget.onDelete,
+                          child: Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              Icon(Icons.delete_outline, size: 14, color: Colors.grey[400]),
+                              const SizedBox(width: 3),
+                              Text('Supprimer',
+                                  style: TextStyle(fontSize: 11, color: Colors.grey[400])),
+                            ],
+                          ),
+                        ),
+                      ],
+                    ],
+                  ),
+                ),
+              ],
             ),
           ),
         ],

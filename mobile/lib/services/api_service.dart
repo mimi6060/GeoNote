@@ -176,6 +176,14 @@ class ApiService {
     _checkError(response);
   }
 
+  Future<void> deleteComment(String commentId) async {
+    final response = await http.delete(
+      Uri.parse('${ApiConfig.baseUrl}/comments/$commentId'),
+      headers: _headers,
+    );
+    _checkError(response);
+  }
+
   void _checkError(http.Response response) {
     if (response.statusCode >= 400) {
       final body = jsonDecode(response.body) as Map<String, dynamic>;

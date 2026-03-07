@@ -1,11 +1,13 @@
 package handler
 
 import (
+	"errors"
 	"net/http"
 
 	"github.com/go-chi/chi/v5"
 	"github.com/mimi6060/GeoNote/backend/internal/middleware"
 	"github.com/mimi6060/GeoNote/backend/internal/model"
+	"github.com/mimi6060/GeoNote/backend/internal/repository"
 	"github.com/mimi6060/GeoNote/backend/internal/service"
 )
 
@@ -71,4 +73,21 @@ func (h *InteractionHandler) AddComment(w http.ResponseWriter, r *http.Request) 
 	}
 
 	WriteJSON(w, http.StatusCreated, comment)
+}
+
+func (h *InteractionHandler) DeleteComment(w http.ResponseWriter, r *http.Request) {
+	commentID := chi.URLParam(r, "commentId")
+	userID := middleware.GetUserID(r.Context())
+
+	err := h.svc.DeleteComment(r.Context(), commentID, userID)
+	if errors.Is(err, repository.ErrNotFound) {
+		WriteError(w, http.StatusNotFound, "NOT_FOUND", "Commentaire introuvable ou non autorise")
+		return
+	}
+	if err != nil {
+		WriteError(w, http.StatusInternalServerError, "DELETE_ERROR", "Erreur serveur")
+		return
+	}
+
+	WriteJSON(w, http.StatusOK, map[string]string{"message": "Commentaire supprime"})
 }
