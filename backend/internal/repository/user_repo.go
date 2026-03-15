@@ -49,3 +49,41 @@ func (r *UserRepo) GetByID(ctx context.Context, id string) (*model.User, error) 
 	}
 	return u, nil
 }
+
+// SearchByUsername searches users by username with ILIKE pattern matching.
+func (r *UserRepo) SearchByUsername(ctx context.Context, query string, limit, offset int) ([]model.UserSummary, int, error) {
+	pattern := "%" + query + "%"
+
+	// Get total count
+	var total int
+	err := r.pool.QueryRow(ctx,
+		`SELECT COUNT(*) FROM users WHERE username ILIKE $1`,
+		pattern,
+	).Scan(&total)
+	if err != nil {
+		return nil, 0, err
+	}
+
+	// Get paginated results
+	rows, err := r.pool.Query(ctx,
+		`SELECT id, username FROM users
+		 WHERE username ILIKE $1
+		 ORDER BY username ASC
+		 LIMIT $2 OFFSET $3`,
+		pattern, limit, offset,
+	)
+	if err != nil {
+		return nil, 0, err
+	}
+	defer rows.Close()
+
+	var users []model.UserSummary
+	for rows.Next() {
+		var u model.UserSummary
+		if err := rows.Scan(&u.ID, &u.Username); err != nil {
+			return nil, 0, err
+		}
+		users = append(users, u)
+	}
+	return users, total, nil
+}

@@ -227,6 +227,32 @@ class ApiService {
     return list.cast<Map<String, dynamic>>();
   }
 
+  // ---- Search ----
+
+  Future<Map<String, dynamic>> search(String query, {String type = 'hashtag', int limit = 20, int offset = 0}) async {
+    final uri = Uri.parse('${ApiConfig.baseUrl}/search').replace(queryParameters: {
+      'q': query,
+      'type': type,
+      'limit': limit.toString(),
+      'offset': offset.toString(),
+    });
+    final response = await http.get(uri, headers: _headers);
+    _checkError(response);
+    final body = jsonDecode(response.body) as Map<String, dynamic>;
+    return body['data'] as Map<String, dynamic>;
+  }
+
+  Future<List<Map<String, dynamic>>> getPopularHashtags({int limit = 10}) async {
+    final uri = Uri.parse('${ApiConfig.baseUrl}/search/hashtags/popular').replace(queryParameters: {
+      'limit': limit.toString(),
+    });
+    final response = await http.get(uri, headers: _headers);
+    _checkError(response);
+    final body = jsonDecode(response.body) as Map<String, dynamic>;
+    final list = body['data']['hashtags'] as List<dynamic>;
+    return list.cast<Map<String, dynamic>>();
+  }
+
   // ---- Interactions ----
 
   Future<Map<String, dynamic>> toggleReaction(String messageId, String emoji) async {

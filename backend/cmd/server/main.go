@@ -56,12 +56,14 @@ func main() {
 	messageSvc := service.NewMessageService(messageRepo, gamRepo, interactionRepo, redisCache, hub)
 	interactionSvc := service.NewInteractionService(interactionRepo)
 	gamSvc := service.NewGamificationService(gamRepo)
+	searchSvc := service.NewSearchService(messageRepo, userRepo)
 
 	// ---- Handlers ----
 	authH := handler.NewAuthHandler(authSvc)
 	messageH := handler.NewMessageHandler(messageSvc)
 	interactionH := handler.NewInteractionHandler(interactionSvc)
 	gamH := handler.NewGamificationHandler(gamSvc)
+	searchH := handler.NewSearchHandler(searchSvc)
 
 	// ---- Router ----
 	r := chi.NewRouter()
@@ -101,6 +103,10 @@ func main() {
 			r.Get("/leaderboard", messageH.GetLeaderboard)
 			r.Get("/events", messageH.DetectEvents)
 		})
+
+		// Search (public)
+		r.Get("/search", searchH.Search)
+		r.Get("/search/hashtags/popular", searchH.PopularHashtags)
 		r.Get("/users/{id}/messages", messageH.GetByUser)
 		r.Get("/users/{id}/profile", gamH.GetUserProfile)
 

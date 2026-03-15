@@ -264,6 +264,94 @@ func (r *MessageRepo) DetectEvents(ctx context.Context, lat, lng float64, radius
 	return events, nil
 }
 
+// GetMessageContent fetches only the content field for a message.
+func (r *MessageRepo) GetMessageContent(ctx context.Context, messageID string) (string, error) {
+	var content string
+	err := r.pool.QueryRow(ctx, `SELECT content FROM messages WHERE id = $1`, messageID).Scan(&content)
+	return content, err
+}
+
+// SearchByHashtag finds messages containing the given hashtag, with pagination.
+func (r *MessageRepo) SearchByHashtag(ctx context.Context, hashtag string, limit, offset int) ([]model.Message, int, error) {
+	tag := strings.ToLower(strings.TrimPrefix(hashtag, "#"))
+
+	// Get total count
+	var total int
+	err := r.pool.QueryRow(ctx,
+		`SELECT COUNT(*) FROM messages
+		 WHERE $1 = ANY(hashtags)
+		   AND (expires_at IS NULL OR expires_at > NOW())
+		   AND (scheduled_at IS NULL OR scheduled_at <= NOW())`,
+		tag,
+	).Scan(&total)
+	if err != nil {
+		return nil, 0, err
+	}
+
+	// Get paginated results
+	rows, err := r.pool.Query(ctx,
+		`SELECT m.id, m.user_id, u.username, m.content,
+		        ST_Y(m.location) AS latitude, ST_X(m.location) AS longitude,
+		        m.visibility, m.hashtags, m.likes_count, m.comments_count, m.created_at,
+		        m.message_type, m.expires_at, m.mystery_radius, m.scheduled_at, m.unlocks_count
+		 FROM messages m
+		 JOIN users u ON m.user_id = u.id
+		 WHERE $1 = ANY(m.hashtags)
+		   AND (m.expires_at IS NULL OR m.expires_at > NOW())
+		   AND (m.scheduled_at IS NULL OR m.scheduled_at <= NOW())
+		 ORDER BY m.created_at DESC
+		 LIMIT $2 OFFSET $3`,
+		tag, limit, offset,
+	)
+	if err != nil {
+		return nil, 0, err
+	}
+	defer rows.Close()
+
+	var messages []model.Message
+	for rows.Next() {
+		var m model.Message
+		if err := rows.Scan(
+			&m.ID, &m.UserID, &m.Username, &m.Content,
+			&m.Latitude, &m.Longitude, &m.Visibility, &m.Hashtags,
+			&m.LikesCount, &m.CommentsCount, &m.CreatedAt,
+			&m.MessageType, &m.ExpiresAt, &m.MysteryRadius, &m.ScheduledAt, &m.UnlocksCount,
+		); err != nil {
+			return nil, 0, err
+		}
+		messages = append(messages, m)
+	}
+	return messages, total, nil
+}
+
+// GetPopularHashtags returns the most used hashtags across recent messages.
+func (r *MessageRepo) GetPopularHashtags(ctx context.Context, limit int) ([]model.HashtagResult, error) {
+	rows, err := r.pool.Query(ctx,
+		`SELECT tag, COUNT(*) AS cnt
+		 FROM messages, unnest(hashtags) AS tag
+		 WHERE (expires_at IS NULL OR expires_at > NOW())
+		   AND (scheduled_at IS NULL OR scheduled_at <= NOW())
+		 GROUP BY tag
+		 ORDER BY cnt DESC
+		 LIMIT $1`,
+		limit,
+	)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	var results []model.HashtagResult
+	for rows.Next() {
+		var h model.HashtagResult
+		if err := rows.Scan(&h.Tag, &h.Count); err != nil {
+			return nil, err
+		}
+		results = append(results, h)
+	}
+	return results, nil
+}
+
 func extractHashtags(content string) []string {
 	matches := hashtagRe.FindAllStringSubmatch(content, -1)
 	seen := make(map[string]bool)
