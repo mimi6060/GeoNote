@@ -32,8 +32,21 @@ func (s *InteractionService) GetComments(ctx context.Context, messageID string) 
 	return s.repo.GetComments(ctx, messageID)
 }
 
-func (s *InteractionService) ReportMessage(ctx context.Context, messageID, userID, reason string) error {
-	return s.repo.ReportMessage(ctx, messageID, userID, reason)
+func (s *InteractionService) ReportMessage(ctx context.Context, messageID, userID, reason, description string) error {
+	if err := s.repo.ReportMessage(ctx, messageID, userID, reason, description); err != nil {
+		return err
+	}
+
+	// Auto-hide: if message has >= 3 reports, hide it
+	count, err := s.repo.GetReportCount(ctx, messageID)
+	if err != nil {
+		return nil // report was saved, don't fail on count error
+	}
+	if count >= 3 {
+		_ = s.repo.HideMessage(ctx, messageID)
+	}
+
+	return nil
 }
 
 func (s *InteractionService) ToggleReaction(ctx context.Context, messageID, userID, emoji string) (*model.ReactionResponse, error) {

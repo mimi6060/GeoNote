@@ -3,7 +3,9 @@ import 'package:provider/provider.dart';
 import 'package:shimmer/shimmer.dart';
 
 import '../config/theme.dart';
+import '../providers/auth_provider.dart';
 import '../providers/messages_provider.dart';
+import '../services/api_service.dart';
 import '../services/location_service.dart';
 import '../widgets/message_card.dart';
 import '../widgets/message_popup.dart';
@@ -48,6 +50,186 @@ class _FeedScreenState extends State<FeedScreen> {
       isScrollControlled: true,
       backgroundColor: Colors.transparent,
       builder: (_) => MessagePopup(message: msg, onRefresh: _load),
+    );
+  }
+
+  void _showReportFromCard(String messageId) {
+    final reasons = <String, String>{
+      'spam': 'Spam',
+      'harassment': 'Harcelement',
+      'inappropriate': 'Contenu inapproprie',
+      'misinformation': 'Desinformation',
+      'other': 'Autre',
+    };
+    String? selectedReason;
+    final descController = TextEditingController();
+
+    showDialog(
+      context: context,
+      builder: (ctx) {
+        return StatefulBuilder(
+          builder: (ctx, setDialogState) {
+            final theme = Theme.of(ctx);
+            final isDark = theme.brightness == Brightness.dark;
+            return AlertDialog(
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(20),
+              ),
+              title: Row(
+                children: [
+                  Icon(Icons.flag_rounded, color: Colors.red[400], size: 22),
+                  const SizedBox(width: 8),
+                  const Text('Signaler',
+                      style:
+                          TextStyle(fontSize: 17, fontWeight: FontWeight.w700)),
+                ],
+              ),
+              content: SingleChildScrollView(
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    ...reasons.entries.map((entry) {
+                      final isSelected = selectedReason == entry.key;
+                      return Padding(
+                        padding: const EdgeInsets.only(bottom: 6),
+                        child: Material(
+                          color: isSelected
+                              ? Colors.red.withValues(alpha: 0.08)
+                              : (isDark
+                                  ? Colors.white.withValues(alpha: 0.04)
+                                  : Colors.grey[50]!),
+                          borderRadius: BorderRadius.circular(12),
+                          child: InkWell(
+                            onTap: () =>
+                                setDialogState(() => selectedReason = entry.key),
+                            borderRadius: BorderRadius.circular(12),
+                            child: Container(
+                              padding: const EdgeInsets.symmetric(
+                                  horizontal: 14, vertical: 12),
+                              decoration: BoxDecoration(
+                                borderRadius: BorderRadius.circular(12),
+                                border: isSelected
+                                    ? Border.all(
+                                        color:
+                                            Colors.red.withValues(alpha: 0.3))
+                                    : null,
+                              ),
+                              child: Row(
+                                children: [
+                                  Icon(
+                                    isSelected
+                                        ? Icons.radio_button_checked
+                                        : Icons.radio_button_off,
+                                    size: 20,
+                                    color: isSelected
+                                        ? Colors.red[400]
+                                        : theme.colorScheme.onSurface
+                                            .withValues(alpha: 0.3),
+                                  ),
+                                  const SizedBox(width: 10),
+                                  Text(entry.value,
+                                      style: TextStyle(
+                                        fontSize: 14,
+                                        fontWeight: isSelected
+                                            ? FontWeight.w600
+                                            : FontWeight.w400,
+                                      )),
+                                ],
+                              ),
+                            ),
+                          ),
+                        ),
+                      );
+                    }),
+                    const SizedBox(height: 8),
+                    TextField(
+                      controller: descController,
+                      maxLines: 2,
+                      maxLength: 500,
+                      style: const TextStyle(fontSize: 13),
+                      decoration: InputDecoration(
+                        hintText: 'Details (optionnel)',
+                        hintStyle: TextStyle(
+                            fontSize: 13,
+                            color: theme.colorScheme.onSurface
+                                .withValues(alpha: 0.35)),
+                        filled: true,
+                        fillColor: isDark
+                            ? Colors.white.withValues(alpha: 0.05)
+                            : Colors.grey[50],
+                        contentPadding: const EdgeInsets.symmetric(
+                            horizontal: 14, vertical: 10),
+                        border: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(12),
+                          borderSide: BorderSide.none,
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              actions: [
+                TextButton(
+                  onPressed: () => Navigator.of(ctx).pop(),
+                  child: Text('Annuler',
+                      style: TextStyle(
+                          color: theme.colorScheme.onSurface
+                              .withValues(alpha: 0.5))),
+                ),
+                TextButton(
+                  onPressed: selectedReason == null
+                      ? null
+                      : () async {
+                          Navigator.of(ctx).pop();
+                          try {
+                            await ApiService().reportMessage(
+                              messageId,
+                              selectedReason!,
+                              description: descController.text.trim(),
+                            );
+                            if (mounted) {
+                              ScaffoldMessenger.of(context).showSnackBar(
+                                SnackBar(
+                                  content: const Text(
+                                      'Signalement enregistre, merci'),
+                                  backgroundColor: Colors.green[600],
+                                  behavior: SnackBarBehavior.floating,
+                                  shape: RoundedRectangleBorder(
+                                    borderRadius: BorderRadius.circular(12),
+                                  ),
+                                ),
+                              );
+                            }
+                          } catch (_) {
+                            if (mounted) {
+                              ScaffoldMessenger.of(context).showSnackBar(
+                                SnackBar(
+                                  content:
+                                      const Text('Erreur lors du signalement'),
+                                  behavior: SnackBarBehavior.floating,
+                                  shape: RoundedRectangleBorder(
+                                    borderRadius: BorderRadius.circular(12),
+                                  ),
+                                ),
+                              );
+                            }
+                          }
+                        },
+                  child: Text('Signaler',
+                      style: TextStyle(
+                        color: selectedReason == null
+                            ? theme.colorScheme.onSurface
+                                .withValues(alpha: 0.2)
+                            : Colors.red[400],
+                        fontWeight: FontWeight.w600,
+                      )),
+                ),
+              ],
+            );
+          },
+        );
+      },
     );
   }
 
@@ -302,6 +484,9 @@ class _FeedScreenState extends State<FeedScreen> {
                                         .toggleLike(sorted[i].id);
                                     _load();
                                   },
+                                  onReport: context.read<AuthProvider>().isLoggedIn
+                                      ? () => _showReportFromCard(sorted[i].id)
+                                      : null,
                                 );
                               },
                             );

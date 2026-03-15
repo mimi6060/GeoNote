@@ -30,13 +30,26 @@ type LikeResponse struct {
 }
 
 type ReportRequest struct {
-	Reason string `json:"reason"`
+	Reason      string `json:"reason"`
+	Description string `json:"description"`
 }
 
 func (r ReportRequest) Validate() map[string]string {
 	errs := make(map[string]string)
-	if r.Reason == "" || len(r.Reason) > 300 {
-		errs["reason"] = "entre 1 et 300 caracteres"
+	validReasons := map[string]bool{
+		"spam":            true,
+		"harassment":      true,
+		"inappropriate":   true,
+		"misinformation":  true,
+		"other":           true,
+	}
+	if r.Reason == "" {
+		errs["reason"] = "raison requise"
+	} else if !validReasons[r.Reason] {
+		errs["reason"] = "raison invalide (spam, harassment, inappropriate, misinformation, other)"
+	}
+	if len(r.Description) > 500 {
+		errs["description"] = "500 caracteres maximum"
 	}
 	return errs
 }

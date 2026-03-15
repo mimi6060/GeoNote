@@ -119,10 +119,28 @@ func (r *InteractionRepo) GetComments(ctx context.Context, messageID string) ([]
 	return comments, nil
 }
 
-func (r *InteractionRepo) ReportMessage(ctx context.Context, messageID, userID, reason string) error {
+func (r *InteractionRepo) ReportMessage(ctx context.Context, messageID, userID, reason, description string) error {
 	_, err := r.pool.Exec(ctx,
-		`INSERT INTO content_reports (reporter_id, message_id, reason) VALUES ($1, $2, $3) ON CONFLICT DO NOTHING`,
-		userID, messageID, reason)
+		`INSERT INTO content_reports (reporter_id, message_id, reason, description) VALUES ($1, $2, $3, $4) ON CONFLICT DO NOTHING`,
+		userID, messageID, reason, description)
+	return err
+}
+
+// GetReportCount returns the number of reports for a given message.
+func (r *InteractionRepo) GetReportCount(ctx context.Context, messageID string) (int, error) {
+	var count int
+	err := r.pool.QueryRow(ctx,
+		`SELECT COUNT(*) FROM content_reports WHERE message_id = $1`,
+		messageID,
+	).Scan(&count)
+	return count, err
+}
+
+// HideMessage marks a message as hidden (auto-moderation).
+func (r *InteractionRepo) HideMessage(ctx context.Context, messageID string) error {
+	_, err := r.pool.Exec(ctx,
+		`UPDATE messages SET is_hidden = true WHERE id = $1`,
+		messageID)
 	return err
 }
 

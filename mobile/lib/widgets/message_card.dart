@@ -9,6 +9,7 @@ class MessageCard extends StatelessWidget {
   final VoidCallback? onTap;
   final VoidCallback? onLike;
   final VoidCallback? onDelete;
+  final VoidCallback? onReport;
   final void Function(String hashtag)? onHashtagTap;
   final bool showDelete;
 
@@ -18,6 +19,7 @@ class MessageCard extends StatelessWidget {
     this.onTap,
     this.onLike,
     this.onDelete,
+    this.onReport,
     this.onHashtagTap,
     this.showDelete = false,
   });
@@ -262,24 +264,54 @@ class MessageCard extends StatelessWidget {
                           onTap: onTap,
                         ),
                         const Spacer(),
-                        // Delete (discreet icon)
-                        if (showDelete && onDelete != null)
-                          Material(
-                            color: Colors.transparent,
-                            borderRadius: BorderRadius.circular(20),
-                            child: InkWell(
-                              onTap: onDelete,
-                              borderRadius:
-                                  BorderRadius.circular(20),
-                              child: Padding(
-                                padding: const EdgeInsets.all(8),
-                                child: Icon(
-                                  Icons.more_horiz,
-                                  size: 20,
-                                  color: subtleText,
-                                ),
-                              ),
+                        // More options menu
+                        if (showDelete || onReport != null)
+                          PopupMenuButton<String>(
+                            icon: Icon(
+                              Icons.more_horiz,
+                              size: 20,
+                              color: subtleText,
                             ),
+                            padding: EdgeInsets.zero,
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(14),
+                            ),
+                            onSelected: (value) {
+                              if (value == 'delete') onDelete?.call();
+                              if (value == 'report') onReport?.call();
+                            },
+                            itemBuilder: (context) => [
+                              if (onReport != null)
+                                PopupMenuItem(
+                                  value: 'report',
+                                  child: Row(
+                                    children: [
+                                      Icon(Icons.flag_outlined,
+                                          size: 18,
+                                          color: Colors.orange[700]),
+                                      const SizedBox(width: 10),
+                                      const Text('Signaler'),
+                                    ],
+                                  ),
+                                ),
+                              if (showDelete && onDelete != null)
+                                PopupMenuItem(
+                                  value: 'delete',
+                                  child: Row(
+                                    children: [
+                                      Icon(Icons.delete_outline,
+                                          size: 18,
+                                          color: Colors.red[400]),
+                                      const SizedBox(width: 10),
+                                      Text(
+                                        'Supprimer',
+                                        style: TextStyle(
+                                            color: Colors.red[400]),
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                            ],
                           ),
                       ],
                     ),

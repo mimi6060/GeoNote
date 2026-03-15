@@ -131,7 +131,7 @@ func (h *InteractionHandler) ReportMessage(w http.ResponseWriter, r *http.Reques
 		return
 	}
 
-	err := h.svc.ReportMessage(r.Context(), messageID, userID, req.Reason)
+	err := h.svc.ReportMessage(r.Context(), messageID, userID, req.Reason, req.Description)
 	if err != nil {
 		WriteError(w, http.StatusInternalServerError, "REPORT_ERROR", "Erreur serveur")
 		return

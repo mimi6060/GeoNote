@@ -309,6 +309,18 @@ class ApiService {
     _checkError(response);
   }
 
+  Future<void> reportMessage(String messageId, String reason, {String description = ''}) async {
+    final response = await http.post(
+      Uri.parse('${ApiConfig.baseUrl}/messages/$messageId/report'),
+      headers: _headers,
+      body: jsonEncode({
+        'reason': reason,
+        'description': description,
+      }),
+    );
+    _checkError(response);
+  }
+
   void _checkError(http.Response response) {
     if (response.statusCode >= 400) {
       final body = jsonDecode(response.body) as Map<String, dynamic>;
