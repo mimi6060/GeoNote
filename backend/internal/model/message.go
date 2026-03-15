@@ -19,7 +19,8 @@ type Message struct {
 	ExpiresAt     *time.Time `json:"expires_at,omitempty"`
 	MysteryRadius int        `json:"mystery_radius,omitempty"`
 	ScheduledAt   *time.Time `json:"scheduled_at,omitempty"`
-	UnlocksCount  int        `json:"unlocks_count,omitempty"`
+	UnlocksCount  int               `json:"unlocks_count,omitempty"`
+	Reactions     []ReactionSummary `json:"reactions,omitempty"`
 }
 
 type CreateMessageRequest struct {

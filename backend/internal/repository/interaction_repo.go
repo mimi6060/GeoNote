@@ -118,3 +118,98 @@ func (r *InteractionRepo) GetComments(ctx context.Context, messageID string) ([]
 	}
 	return comments, nil
 }
+
+func (r *InteractionRepo) ReportMessage(ctx context.Context, messageID, userID, reason string) error {
+	_, err := r.pool.Exec(ctx,
+		`INSERT INTO content_reports (reporter_id, message_id, reason) VALUES ($1, $2, $3) ON CONFLICT DO NOTHING`,
+		userID, messageID, reason)
+	return err
+}
+
+// ToggleReaction adds or removes an emoji reaction. Returns true if the reaction was added.
+func (r *InteractionRepo) ToggleReaction(ctx context.Context, messageID, userID, emoji string) (bool, error) {
+	var existingID string
+	err := r.pool.QueryRow(ctx,
+		`SELECT id FROM reactions WHERE message_id = $1 AND user_id = $2 AND emoji = $3`,
+		messageID, userID, emoji,
+	).Scan(&existingID)
+
+	if err == nil {
+		// Exists — remove it
+		_, err = r.pool.Exec(ctx, `DELETE FROM reactions WHERE id = $1`, existingID)
+		if err != nil {
+			return false, err
+		}
+		return false, nil
+	} else if err == pgx.ErrNoRows {
+		// Doesn't exist — add it
+		_, err = r.pool.Exec(ctx,
+			`INSERT INTO reactions (message_id, user_id, emoji) VALUES ($1, $2, $3)`,
+			messageID, userID, emoji,
+		)
+		if err != nil {
+			return false, err
+		}
+		return true, nil
+	}
+	return false, err
+}
+
+// GetReactionsByMessage returns the count per emoji and whether the given user reacted.
+func (r *InteractionRepo) GetReactionsByMessage(ctx context.Context, messageID, userID string) ([]model.ReactionSummary, error) {
+	rows, err := r.pool.Query(ctx,
+		`SELECT r.emoji, COUNT(*) AS cnt,
+		        BOOL_OR(r.user_id = $2) AS reacted
+		 FROM reactions r
+		 WHERE r.message_id = $1
+		 GROUP BY r.emoji
+		 ORDER BY cnt DESC`,
+		messageID, userID,
+	)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	var summaries []model.ReactionSummary
+	for rows.Next() {
+		var s model.ReactionSummary
+		if err := rows.Scan(&s.Emoji, &s.Count, &s.Reacted); err != nil {
+			return nil, err
+		}
+		summaries = append(summaries, s)
+	}
+	return summaries, nil
+}
+
+// GetReactionsByMessages returns reaction summaries for multiple messages at once (batch).
+func (r *InteractionRepo) GetReactionsByMessages(ctx context.Context, messageIDs []string, userID string) (map[string][]model.ReactionSummary, error) {
+	if len(messageIDs) == 0 {
+		return nil, nil
+	}
+
+	rows, err := r.pool.Query(ctx,
+		`SELECT r.message_id, r.emoji, COUNT(*) AS cnt,
+		        BOOL_OR(r.user_id = $2) AS reacted
+		 FROM reactions r
+		 WHERE r.message_id = ANY($1)
+		 GROUP BY r.message_id, r.emoji
+		 ORDER BY r.message_id, cnt DESC`,
+		messageIDs, userID,
+	)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	result := make(map[string][]model.ReactionSummary)
+	for rows.Next() {
+		var msgID string
+		var s model.ReactionSummary
+		if err := rows.Scan(&msgID, &s.Emoji, &s.Count, &s.Reacted); err != nil {
+			return nil, err
+		}
+		result[msgID] = append(result[msgID], s)
+	}
+	return result, nil
+}

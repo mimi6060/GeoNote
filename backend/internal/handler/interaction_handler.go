@@ -91,3 +91,51 @@ func (h *InteractionHandler) DeleteComment(w http.ResponseWriter, r *http.Reques
 
 	WriteJSON(w, http.StatusOK, map[string]string{"message": "Commentaire supprime"})
 }
+
+func (h *InteractionHandler) ToggleReaction(w http.ResponseWriter, r *http.Request) {
+	messageID := chi.URLParam(r, "id")
+	userID := middleware.GetUserID(r.Context())
+
+	var req model.ReactionRequest
+	if err := DecodeJSON(r, &req); err != nil {
+		WriteError(w, http.StatusBadRequest, "INVALID_JSON", "JSON invalide")
+		return
+	}
+
+	if errs := req.Validate(); len(errs) > 0 {
+		WriteValidationError(w, errs)
+		return
+	}
+
+	resp, err := h.svc.ToggleReaction(r.Context(), messageID, userID, req.Emoji)
+	if err != nil {
+		WriteError(w, http.StatusInternalServerError, "REACTION_ERROR", "Erreur serveur")
+		return
+	}
+
+	WriteJSON(w, http.StatusOK, resp)
+}
+
+func (h *InteractionHandler) ReportMessage(w http.ResponseWriter, r *http.Request) {
+	messageID := chi.URLParam(r, "id")
+	userID := middleware.GetUserID(r.Context())
+
+	var req model.ReportRequest
+	if err := DecodeJSON(r, &req); err != nil {
+		WriteError(w, http.StatusBadRequest, "INVALID_JSON", "JSON invalide")
+		return
+	}
+
+	if errs := req.Validate(); len(errs) > 0 {
+		WriteValidationError(w, errs)
+		return
+	}
+
+	err := h.svc.ReportMessage(r.Context(), messageID, userID, req.Reason)
+	if err != nil {
+		WriteError(w, http.StatusInternalServerError, "REPORT_ERROR", "Erreur serveur")
+		return
+	}
+
+	WriteJSON(w, http.StatusCreated, map[string]string{"message": "Signalement enregistre"})
+}

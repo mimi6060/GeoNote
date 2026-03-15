@@ -14,14 +14,15 @@ import (
 )
 
 type MessageService struct {
-	repo     *repository.MessageRepo
-	gamRepo  *repository.GamificationRepo
-	cache    *cache.RedisCache
-	hub      *ws.Hub
+	repo            *repository.MessageRepo
+	gamRepo         *repository.GamificationRepo
+	interactionRepo *repository.InteractionRepo
+	cache           *cache.RedisCache
+	hub             *ws.Hub
 }
 
-func NewMessageService(repo *repository.MessageRepo, gamRepo *repository.GamificationRepo, c *cache.RedisCache, hub *ws.Hub) *MessageService {
-	return &MessageService{repo: repo, gamRepo: gamRepo, cache: c, hub: hub}
+func NewMessageService(repo *repository.MessageRepo, gamRepo *repository.GamificationRepo, interactionRepo *repository.InteractionRepo, c *cache.RedisCache, hub *ws.Hub) *MessageService {
+	return &MessageService{repo: repo, gamRepo: gamRepo, interactionRepo: interactionRepo, cache: c, hub: hub}
 }
 
 func (s *MessageService) Create(ctx context.Context, userID string, req model.CreateMessageRequest) (*model.Message, error) {
@@ -31,7 +32,13 @@ func (s *MessageService) Create(ctx context.Context, userID string, req model.Cr
 	}
 
 	s.cache.InvalidateZone(ctx)
-	s.hub.BroadcastNewMessage(msg)
+	if msg.MessageType == "mystery" {
+		masked := *msg
+		masked.Content = "???"
+		s.hub.BroadcastNewMessage(&masked)
+	} else {
+		s.hub.BroadcastNewMessage(msg)
+	}
 
 	// Update gamification: streak + badges
 	if s.gamRepo != nil {
@@ -69,6 +76,7 @@ func (s *MessageService) GetNearby(ctx context.Context, q model.NearbyQuery) ([]
 	}
 
 	// Hide mystery message content for users who haven't unlocked them
+	hasMaskedMystery := false
 	for i := range messages {
 		if messages[i].MessageType == "mystery" {
 			if q.UserID == "" || messages[i].UserID != q.UserID {
@@ -80,6 +88,23 @@ func (s *MessageService) GetNearby(ctx context.Context, q model.NearbyQuery) ([]
 					}
 				}
 				messages[i].Content = "???"
+				hasMaskedMystery = true
+			}
+		}
+	}
+
+	// Enrich messages with reactions
+	if s.interactionRepo != nil && len(messages) > 0 {
+		msgIDs := make([]string, len(messages))
+		for i := range messages {
+			msgIDs[i] = messages[i].ID
+		}
+		reactionsMap, err := s.interactionRepo.GetReactionsByMessages(ctx, msgIDs, q.UserID)
+		if err == nil && reactionsMap != nil {
+			for i := range messages {
+				if r, ok := reactionsMap[messages[i].ID]; ok {
+					messages[i].Reactions = r
+				}
 			}
 		}
 	}
@@ -101,8 +126,8 @@ func (s *MessageService) GetNearby(ctx context.Context, q model.NearbyQuery) ([]
 		})
 	}
 
-	// Cache store
-	if q.Hashtag == "" && (q.Sort == "" || q.Sort == "distance") {
+	// Cache store — skip caching if any mystery content was masked to avoid cache poisoning
+	if q.Hashtag == "" && (q.Sort == "" || q.Sort == "distance") && !hasMaskedMystery {
 		key := cache.GridKey(q.Latitude, q.Longitude, q.Radius, q.UserID)
 		if err := s.cache.Set(ctx, key, messages); err != nil {
 			log.Printf("[cache] erreur SET: %v", err)
@@ -176,8 +201,11 @@ func (s *MessageService) UnlockMystery(ctx context.Context, messageID, userID st
 		s.gamRepo.CheckAndAwardBadges(ctx, userID)
 	}
 
-	// Return full content
-	target.Content = target.Content // content was hidden; re-fetch
+	// Return full content — re-fetch from DB since target.Content may have been masked
+	realContent, err := s.repo.GetMessageContent(ctx, messageID)
+	if err == nil {
+		target.Content = realContent
+	}
 	return target, newlyUnlocked, nil
 }
 

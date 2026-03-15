@@ -12,6 +12,8 @@ class ApiService {
 
   String? _token;
 
+  String? get token => _token;
+
   void setToken(String? token) => _token = token;
 
   Map<String, String> get _headers => {
@@ -227,6 +229,17 @@ class ApiService {
 
   // ---- Interactions ----
 
+  Future<Map<String, dynamic>> toggleReaction(String messageId, String emoji) async {
+    final response = await http.post(
+      Uri.parse('${ApiConfig.baseUrl}/messages/$messageId/react'),
+      headers: _headers,
+      body: jsonEncode({'emoji': emoji}),
+    );
+    _checkError(response);
+    final body = jsonDecode(response.body) as Map<String, dynamic>;
+    return body['data'] as Map<String, dynamic>;
+  }
+
   Future<bool> toggleLike(String messageId) async {
     final data = await toggleLikeRaw(messageId);
     return data['liked'] as bool;
@@ -273,14 +286,18 @@ class ApiService {
   void _checkError(http.Response response) {
     if (response.statusCode >= 400) {
       final body = jsonDecode(response.body) as Map<String, dynamic>;
-      throw ApiException(body['error']?['message'] ?? 'Erreur ${response.statusCode}');
+      throw ApiException(
+        body['error']?['message'] ?? 'Erreur ${response.statusCode}',
+        statusCode: response.statusCode,
+      );
     }
   }
 }
 
 class ApiException implements Exception {
   final String message;
-  const ApiException(this.message);
+  final int statusCode;
+  const ApiException(this.message, {this.statusCode = 0});
 
   @override
   String toString() => message;

@@ -53,7 +53,7 @@ func main() {
 
 	// ---- Services ----
 	authSvc := service.NewAuthService(userRepo, cfg.JWTSecret, cfg.JWTExpiry)
-	messageSvc := service.NewMessageService(messageRepo, gamRepo, redisCache, hub)
+	messageSvc := service.NewMessageService(messageRepo, gamRepo, interactionRepo, redisCache, hub)
 	interactionSvc := service.NewInteractionService(interactionRepo)
 	gamSvc := service.NewGamificationService(gamRepo)
 
@@ -72,13 +72,15 @@ func main() {
 	r.Use(chimw.Timeout(30 * time.Second))
 	r.Use(chimw.RealIP)
 	r.Use(cors.Handler(cors.Options{
-		AllowedOrigins:   []string{"*"},
+		AllowedOrigins:   []string{"http://localhost:*", "http://127.0.0.1:*"},
 		AllowedMethods:   []string{"GET", "POST", "PUT", "DELETE", "OPTIONS"},
 		AllowedHeaders:   []string{"Accept", "Authorization", "Content-Type"},
 		ExposedHeaders:   []string{"Link"},
-		AllowCredentials: false,
+		AllowCredentials: true,
 		MaxAge:           300,
 	}))
+	r.Use(middleware.RequestID)
+	r.Use(middleware.SecurityHeaders)
 	r.Use(middleware.RateLimit(10, 20)) // 10 req/s, burst 20
 
 	// ---- Routes ----
@@ -109,12 +111,14 @@ func main() {
 			r.Get("/auth/me", authH.Me)
 			r.Get("/me/profile", gamH.GetMyProfile)
 
-			r.With(middleware.AntiSpam(30 * time.Second)).Post("/messages", messageH.Create)
+			r.With(middleware.AntiSpam(5 * time.Second)).Post("/messages", messageH.Create)
 			r.Delete("/messages/{id}", messageH.Delete)
 			r.Post("/messages/{id}/unlock", messageH.UnlockMystery)
 
 			r.Post("/messages/{id}/like", interactionH.ToggleLike)
+			r.Post("/messages/{id}/react", interactionH.ToggleReaction)
 			r.Post("/messages/{id}/comments", interactionH.AddComment)
+			r.Post("/messages/{id}/report", interactionH.ReportMessage)
 			r.Delete("/comments/{commentId}", interactionH.DeleteComment)
 		})
 
@@ -122,9 +126,16 @@ func main() {
 		r.Get("/messages/{id}/comments", interactionH.GetComments)
 	})
 
-	// WebSocket
+	// WebSocket (with optional token auth)
 	r.Get("/ws", func(w http.ResponseWriter, r *http.Request) {
-		ws.ServeWS(hub, w, r)
+		var userID string
+		token := r.URL.Query().Get("token")
+		if token != "" {
+			if uid, err := authSvc.ValidateToken(token); err == nil {
+				userID = uid
+			}
+		}
+		ws.ServeWS(hub, w, r, userID)
 	})
 
 	// ---- Server ----

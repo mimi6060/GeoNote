@@ -1,3 +1,22 @@
+class ReactionSummary {
+  final String emoji;
+  final int count;
+  final bool reacted;
+
+  const ReactionSummary({
+    required this.emoji,
+    required this.count,
+    this.reacted = false,
+  });
+
+  factory ReactionSummary.fromJson(Map<String, dynamic> json) =>
+      ReactionSummary(
+        emoji: json['emoji'] as String,
+        count: json['count'] as int? ?? 0,
+        reacted: json['reacted'] as bool? ?? false,
+      );
+}
+
 class Message {
   final String id;
   final String userId;
@@ -16,6 +35,7 @@ class Message {
   final int mysteryRadius;
   final DateTime? scheduledAt;
   final int unlocksCount;
+  final List<ReactionSummary> reactions;
 
   const Message({
     required this.id,
@@ -35,6 +55,7 @@ class Message {
     this.mysteryRadius = 50,
     this.scheduledAt,
     this.unlocksCount = 0,
+    this.reactions = const [],
   });
 
   factory Message.fromJson(Map<String, dynamic> json) => Message(
@@ -62,6 +83,10 @@ class Message {
             ? DateTime.parse(json['scheduled_at'] as String)
             : null,
         unlocksCount: json['unlocks_count'] as int? ?? 0,
+        reactions: (json['reactions'] as List<dynamic>?)
+                ?.map((e) => ReactionSummary.fromJson(e as Map<String, dynamic>))
+                .toList() ??
+            [],
       );
 
   bool get isMystery => messageType == 'mystery';
@@ -74,6 +99,18 @@ class Message {
     final diff = expiresAt!.difference(DateTime.now());
     if (diff.isNegative) return 'Expire';
     if (diff.inHours > 0) return '${diff.inHours}h';
+    return '${diff.inMinutes}min';
+  }
+
+  bool get isCapsuleRevealed => isCapsule && scheduledAt != null && DateTime.now().isAfter(scheduledAt!);
+  bool get isCapsulePending => isCapsule && scheduledAt != null && DateTime.now().isBefore(scheduledAt!);
+
+  String get capsuleCountdown {
+    if (scheduledAt == null) return '';
+    final diff = scheduledAt!.difference(DateTime.now());
+    if (diff.isNegative) return 'Revele !';
+    if (diff.inDays > 0) return '${diff.inDays}j ${diff.inHours % 24}h';
+    if (diff.inHours > 0) return '${diff.inHours}h ${diff.inMinutes % 60}min';
     return '${diff.inMinutes}min';
   }
 
